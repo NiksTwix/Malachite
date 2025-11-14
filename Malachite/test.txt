@@ -1,0 +1,75 @@
+float x = 10.2;    //double in c++
+int y = 10;     //int64 or long long in c++
+//or...
+float x = 10.2
+int y = 10
+
+if (condition)
+{
+  ///code
+}
+elif (another condition)
+{
+  //code
+}
+else: code  //the first line is executed
+
+for x (start_index, end_index, step)
+{
+  //code
+  /*
+    Multilines comment
+    if start_index is less than end_index that step is above 0
+    if start_index is bigger than end_index that step is below 0
+    break and continue
+  */
+}
+while (condition)
+{
+  //code
+}
+
+func function1(type arg1,type arg2) -> returned
+{
+  return 
+}
+
+op_code      // from elscript
+{
+  //asm _style_code
+}
+
+//In the future---------------------------------------------------
+
+
+user_type char: int 
+{ //analog "using" from c++ but without implicit conversion
+    constructor from_int(int x) -> char { ... }
+}
+
+call_native("player_script","damage",20,20,20....)
+
+
+//function's blocks (semi function's inheritance)
+func LengthSquared(type arg1,type arg2) -> returned_type    
+{
+  block "init"
+  //initing
+  block "calculation"
+  //length square calculate
+  return result
+}
+func Length(type arg1,type arg2) -> returned : LengthSquared
+{
+  block "calculation"  //overwriting
+  //sqrt(x)    
+  return result
+}
+//Compiler pastes code from LengthSquared and overwrite block, names of variables saved, types must are saved
+
+class Vector
+{
+  int field1;
+  int field2;
+  int field3;
+}

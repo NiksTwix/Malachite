@@ -1,0 +1,100 @@
+#pragma once
+#include <cstdint>
+#include <cstdlib>
+#include <iostream>
+namespace MalachiteCore 
+{
+    enum OpCode : uint16_t  //little-endian!
+    {
+        OP_NOP = 0,
+
+        // Arithmetic [1-30]
+        OP_IADD_RRR = 1,
+        OP_ISUB_RRR,
+        OP_IMUL_RRR,
+        OP_IDIV_RRR,
+        OP_IMOD_RRR,
+        OP_INEG_RR,
+        OP_DADD_RRR,
+        OP_DSUB_RRR,
+        OP_DMUL_RRR,
+        OP_DDIV_RRR,
+        OP_DNEG_RR,
+        // ... 30
+
+        // Logic [31-60]
+        OP_AND_RRR = 31,
+        OP_OR_RRR,
+        OP_NOT_RR,
+        OP_CMP_RR,
+        OP_BIT_OR_RRR,
+        OP_BIT_NOT_RR,
+        OP_BIT_AND_RRR,
+        OP_BIT_OFFSET_LEFT_RRR,
+        OP_BIT_OFFSET_RIGHT_RRR,
+        // ... 60
+
+        // Memory [61-80]
+        OP_LOAD_RM = 61,    //register-destination,             address loading from - source0, size [1-8 bytes] - source1
+        OP_STORE_MR,        //Address saving to-destination,    register - source0,             size [1-8 bytes] - source1
+        OP_MOV_RR,
+        OP_MOV_RI_INT,          //Integer
+        OP_MOV_RI_UINT,         //Unsigned integer
+        OP_MOV_RI_DOUBLE,       //Double
+        OP_CREATE_FRAME,
+        OP_DESTROY_FRAME,
+        OP_PUSH,                // destination[offset to (not register)], source0[register from]
+        OP_POP,                 // destination[register to], source0[offset from (not register)]
+        OP_LOAD_LOCAL,          //destination[register]            source[memory-offset]          source1[size in bytes]  
+        OP_STORE_LOCAL,         //destination[memory-offset]       source[register]               source1[size in bytes]  
+        OP_STORE_ENCLOSING,     //destination[memory-offset]       source0[register]              source1[size and depth] size - 32 little bits, depth - 32 big bits       we store variable to n frame below
+        OP_LOAD_ENCLOSING,      //destination[register]            source0[memory-offset]         source1[size and depth] size - 32 little bits, depth - 32 big bits       we load variable from n frame below
+
+        OP_ALLOCATE_MEMORY,
+        OP_FREE_MEMORY,
+
+        // Control flow [91-120]  
+        OP_JMP = 91,
+        OP_JZ,
+        OP_JNZ,
+        OP_CALL,
+        OP_RET,
+        OP_HALT,
+        // ... 120
+
+        // System Calls [121]
+        OP_SYSTEM_CALL = 121,   //destination[SysCall], source0[param0], source1[param1]
+        // Other: Types Convertion [122-123]
+        OP_TC_ITD_R,    //Type Convertion Integer To Double
+        OP_TC_DTI_R,    //Type Convertion Double To Integer
+    };
+
+    enum SysCall 
+    {
+        //PRINT
+        PRINT_INT = 0,
+        PRINT_DOUBLE,
+        PRINT_CHAR_ARRAY,   // source0[param0-pointer], source1[param1-size of string]
+    };
+
+
+    namespace OperationListBlock {
+        constexpr uint16_t NOP = 0;
+        constexpr uint16_t ARITHMETIC_START = 1;
+        constexpr uint16_t ARITHMETIC_END = 30;
+        constexpr uint16_t LOGIC_START = 31;
+        constexpr uint16_t LOGIC_END = 60;
+        constexpr uint16_t MEMORY_START = 61;
+        constexpr uint16_t MEMORY_END = 80;
+        constexpr uint16_t CONTROL_FLOW_START = 91;
+        constexpr uint16_t CONTROL_FLOW_END = 120;
+        constexpr uint16_t SYSTEM_CALLS_START = 121;
+        constexpr uint16_t SYSTEM_CALLS_END = 121;
+
+        inline bool IsOperationInInterval(OpCode value, uint16_t min, uint16_t max) 
+        {
+            return value <= max && value >= min;
+        }
+    }
+
+}

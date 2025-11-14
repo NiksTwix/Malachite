@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Исходные файлы">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Файлы заголовков">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Файлы ресурсов">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Файлы заголовков\compiler">
+      <UniqueIdentifier>{75e6d1e5-eb92-4ed1-a687-52b024bd095c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\core">
+      <UniqueIdentifier>{45064f9d-18a4-4d55-aa96-7a9decc01d6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Исходные файлы\compiler">
+      <UniqueIdentifier>{d3ce555d-0d60-457e-80ad-d47e738797ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Исходные файлы\core">
+      <UniqueIdentifier>{619ca083-2c5b-41cd-a87d-1d54d56eadbc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\compiler\decoding">
+      <UniqueIdentifier>{76c7ccfe-d7ab-44af-aa24-90b1dbfcc21f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\compiler\Compiler.hpp">
+      <Filter>Файлы заголовков\compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\errors.h">
+      <Filter>Файлы заголовков\core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\functions.h">
+      <Filter>Файлы заголовков\core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\compiler\Lexer.hpp">
+      <Filter>Файлы заголовков\compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\operations.h">
+      <Filter>Файлы заголовков\core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\vm.h">
+      <Filter>Файлы заголовков\core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\vmstructs.h">
+      <Filter>Файлы заголовков\core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\compiler\Definitions.hpp">
+      <Filter>Файлы заголовков\compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="include\compiler\StringOperations.hpp">
+      <Filter>Файлы заголовков\compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="include\compiler\Logger.hpp">
+      <Filter>Файлы заголовков\compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="include\compiler\ASTBuilder.hpp">
+      <Filter>Файлы заголовков\compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="include\compiler\CompilationState.hpp">
+      <Filter>Файлы заголовков\compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="include\compiler\ArithmeticDecoder.hpp">
+      <Filter>Файлы заголовков\compiler\decoding</Filter>
+    </ClInclude>
+    <ClInclude Include="include\compiler\PseudoByteDecoder.hpp">
+      <Filter>Файлы заголовков\compiler\decoding</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Malachite.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="source\compiler\Compiler.cpp">
+      <Filter>Исходные файлы\compiler</Filter>
+    </ClCompile>
+    <ClCompile Include="source\core\functions.cpp">
+      <Filter>Исходные файлы\core</Filter>
+    </ClCompile>
+    <ClCompile Include="source\compiler\Lexer.cpp">
+      <Filter>Исходные файлы\compiler</Filter>
+    </ClCompile>
+    <ClCompile Include="source\compiler\ASTBuilder.cpp">
+      <Filter>Исходные файлы\compiler</Filter>
+    </ClCompile>
+    <ClCompile Include="source\compiler\PseudoByteDecoder.cpp">
+      <Filter>Исходные файлы\compiler</Filter>
+    </ClCompile>
+    <ClCompile Include="source\compiler\ArithmeticDecoder.cpp">
+      <Filter>Исходные файлы\compiler</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="test.txt">
+      <Filter>Исходные файлы</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
