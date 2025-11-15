@@ -1,4 +1,4 @@
-#include "..\..\include\compiler\ArithmeticDecoder.hpp"
+п»ї#include "..\..\include\compiler\ArithmeticDecoder.hpp"
 #include "..\..\include\compiler\StringOperations.hpp"
 
 
@@ -32,7 +32,7 @@ namespace Malachite
 		return nullptr;
 	}
 
-	std::vector<ExpressionDecoder::TokensGroup> ExpressionDecoder::ToPostfixForm(const std::vector<Token>& original)
+	std::vector<TokensGroup> ExpressionDecoder::ToPostfixForm(const std::vector<Token>& original)
 	{
 		std::vector<TokensGroup> operations;		// i dont want use the stack, because it doens has index accept
 		std::vector<TokensGroup> result;		//identifiers and literals
@@ -42,25 +42,27 @@ namespace Malachite
 			const Token& t = original[i];
 
 			if (t.type == TokenType::IDENTIFIER && i + 1 < original.size() && original[i + 1].type == TokenType::DELIMITER && original[i + 1].value.strVal == "(") {
-				// Нашли вызов функции - создаём сложную группу
+				// РќР°С€Р»Рё РІС‹Р·РѕРІ С„СѓРЅРєС†РёРё - СЃРѕР·РґР°С‘Рј СЃР»РѕР¶РЅСѓСЋ РіСЂСѓРїРїСѓ
 				TokensGroup func_call;
-				func_call.tokens.push_back(TokensGroup(t)); // имя функции
+				func_call.tokens.push_back(TokensGroup(t)); // РёРјСЏ С„СѓРЅРєС†РёРё
 
-				i += 2; // пропускаем имя и "("
+				i += 2; // РїСЂРѕРїСѓСЃРєР°РµРј РёРјСЏ Рё "("
 				std::vector<Token> args_tokens;
 				int depth = 1;
 
-				// Собираем аргументы рекурсивно
+				// РЎРѕР±РёСЂР°РµРј Р°СЂРіСѓРјРµРЅС‚С‹ СЂРµРєСѓСЂСЃРёРІРЅРѕ
 				while (i < original.size() && depth > 0) {
 					if (original[i].value.strVal == "(") depth++;
 					else if (original[i].value.strVal == ")") depth--;
 					else if (original[i].value.strVal == "," && depth == 1) {
-						// Нашли разделитель аргументов
+						// РќР°С€Р»Рё СЂР°Р·РґРµР»РёС‚РµР»СЊ Р°СЂРіСѓРјРµРЅС‚РѕРІ
 						if (!args_tokens.empty()) {
+							TokensGroup arg;
 							auto arg_postfix = ToPostfixForm(args_tokens);
-							func_call.tokens.insert(func_call.tokens.end(),
+							arg.tokens.insert(arg.tokens.end(),
 								arg_postfix.begin(), arg_postfix.end());
 							args_tokens.clear();
+							func_call.tokens.push_back(arg);
 						}
 						i++;
 						continue;
@@ -71,21 +73,34 @@ namespace Malachite
 					}
 					i++;
 				}
-				i--; // компенсация
-
+				i--; // РєРѕРјРїРµРЅСЃР°С†РёСЏ
+				if (!args_tokens.empty()) {
+					TokensGroup arg;
+					auto arg_postfix = ToPostfixForm(args_tokens);
+					arg.tokens.insert(arg.tokens.end(),
+						arg_postfix.begin(), arg_postfix.end());
+					args_tokens.clear();
+					func_call.tokens.push_back(arg);
+				}
 				result.push_back(func_call);
 				Logger::Get().PrintInfo("ToPostfix: discovered function's call \"" + func_call.tokens[0].token.value.strVal + "\" with " + std::to_string(func_call.tokens.size() - 3) + " arguments.");
 			}
-			else if (t.type == TokenType::IDENTIFIER || t.type == TokenType::LITERAL) result.push_back(TokensGroup(t)); //push variable or literal to result(values) stack
-			else if (t.type == TokenType::OPERATOR) 
-			{
-				while (!operations.empty() && (SyntaxInfo::GetOperationPriority(operations.back().token) > SyntaxInfo::GetOperationPriority(t))) {
+			else if (t.type == TokenType::IDENTIFIER || t.type == TokenType::LITERAL) {
+				result.push_back(TokensGroup(t));
+			}
+			else if (t.type == TokenType::OPERATOR) {
+				std::cout << "OPERATOR: " << t.value.strVal << " priority: " << SyntaxInfo::GetOperationPriority(t) << std::endl;
+				std::cout << "Stack top: ";
+				while (!operations.empty() &&
+					operations.back().token.value.strVal != "(" &&  // dont push out"("
+					(SyntaxInfo::GetOperationPriority(operations.back().token) >= SyntaxInfo::GetOperationPriority(t))) {
+					std::cout << "POPPING: " << operations.back().token.value.strVal << std::endl;
 					result.push_back(operations.back());
 					operations.pop_back();
 				}
 				operations.push_back(TokensGroup(t));
 			}
-			else if (original[i + 1].type == TokenType::DELIMITER && t.value.strVal == "(") {
+			else if (t.value.strVal == "(") {  // в†ђ Simple delimiter handling
 				operations.push_back(TokensGroup(t));
 			}
 			else if (t.value.strVal == ")") {
@@ -93,9 +108,10 @@ namespace Malachite
 					result.push_back(operations.back());
 					operations.pop_back();
 				}
-				operations.pop_back(); // удаляем "("
+				if (!operations.empty()) operations.pop_back(); // deleting "("
 			}
 		}
+
 		while (!operations.empty()) {
 			result.push_back(operations.back());
 			operations.pop_back();
@@ -111,20 +127,20 @@ namespace Malachite
 		for (size_t i = 0; i < left.size(); i++) {
 			const Token& t = left[i];
 
-			// Проверка на const
+			// РџСЂРѕРІРµСЂРєР° РЅР° const
 			if (t.type == TokenType::KEYWORD && t.value.strVal == "const") {
 				is_const = true;
 				continue;
 			}
 
-			// Объявление переменной: "int x"
+			// РћР±СЉСЏРІР»РµРЅРёРµ РїРµСЂРµРјРµРЅРЅРѕР№: "int x"
 			if (t.type == TokenType::TYPE_MARKER && i + 1 < left.size() &&
 				left[i + 1].type == TokenType::IDENTIFIER)
 			{
 				return HandleVariableDeclaration(left, i, is_const, state);
 			}
 
-			// Присваивание существующей переменной: "x"
+			// РџСЂРёСЃРІР°РёРІР°РЅРёРµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ РїРµСЂРµРјРµРЅРЅРѕР№: "x"
 			if (t.type == TokenType::IDENTIFIER) {
 				return HandleVariableAssignment(t, is_const, state);
 			}
@@ -138,31 +154,31 @@ namespace Malachite
 		const Token& type_token = left[type_index];
 		const Token& name_token = left[type_index + 1];
 
-		// Проверка типа
+		// РџСЂРѕРІРµСЂРєР° С‚РёРїР°
 		auto* type = FindType(state, type_token.value.strVal);
 		if (!type) {
 			Logger::Get().PrintTypeError("Type \"" + type_token.value.strVal + "\" doesn't exist", type_token.line);
 			return result;
 		}
 
-		// Проверка на повторное объявление
+		// РџСЂРѕРІРµСЂРєР° РЅР° РїРѕРІС‚РѕСЂРЅРѕРµ РѕР±СЉСЏРІР»РµРЅРёРµ
 		if (state->GetCurrentSpace()->variables_table.IsExists(name_token.value.strVal)) {
 			Logger::Get().PrintTypeError("Redeclaring variable \"" + name_token.value.strVal + "\"", name_token.line);
 			return result;
 		}
 
-		// Добавляем переменную в таблицу
+		// Р”РѕР±Р°РІР»СЏРµРј РїРµСЂРµРјРµРЅРЅСѓСЋ РІ С‚Р°Р±Р»РёС†Сѓ
 		Variable var(name_token.value.strVal, type->type_id, is_const);
 		state->GetCurrentSpace()->variables_table.AddVariable(var);
 
-		// Генерируем команду объявления
+		// Р“РµРЅРµСЂРёСЂСѓРµРј РєРѕРјР°РЅРґСѓ РѕР±СЉСЏРІР»РµРЅРёСЏ
 		PseudoCommand declare_cmd(PseudoOpCode::DeclareVariable);
 		declare_cmd.parameters["name"] = name_token.value.strVal;
 		declare_cmd.parameters["type"] = type->type_id;
 		result.push_back(declare_cmd);
 
-		// Генерируем команду сохранения (значение уже в стеке от правой части)
-		PseudoCommand store_cmd(PseudoOpCode::Store);		//или LOAD ARITHMETIC_OPER STORE 
+		// Р“РµРЅРµСЂРёСЂСѓРµРј РєРѕРјР°РЅРґСѓ СЃРѕС…СЂР°РЅРµРЅРёСЏ (Р·РЅР°С‡РµРЅРёРµ СѓР¶Рµ РІ СЃС‚РµРєРµ РѕС‚ РїСЂР°РІРѕР№ С‡Р°СЃС‚Рё)
+		PseudoCommand store_cmd(PseudoOpCode::Store);		//РёР»Рё LOAD ARITHMETIC_OPER STORE 
 		store_cmd.parameters["name"] = name_token.value.strVal;
 		result.push_back(store_cmd);
 
@@ -172,14 +188,14 @@ namespace Malachite
 	{
 		std::vector<PseudoCommand> result;
 
-		// Проверка существования переменной
+		// РџСЂРѕРІРµСЂРєР° СЃСѓС‰РµСЃС‚РІРѕРІР°РЅРёСЏ РїРµСЂРµРјРµРЅРЅРѕР№
 		auto* variable = FindVariable(state, var_name.value.strVal);
 		if (!variable) {
 			Logger::Get().PrintTypeError("Variable \"" + var_name.value.strVal + "\" is not declared", var_name.line); 
 			return result;
 		}
 
-		// Проверка на const
+		// РџСЂРѕРІРµСЂРєР° РЅР° const
 		auto& var = *variable;
 		if (var.is_const) {
 			Logger::Get().PrintTypeError("Variable \"" + var_name.value.strVal + "\" is constant", var_name.line); 
@@ -193,9 +209,9 @@ namespace Malachite
 		return result;
 	}
 
-	std::vector<PseudoCommand> ExpressionDecoder::ProcessRightSide(const std::vector<Token>& left, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::ProcessRightSide(const std::vector<Token>& right, std::shared_ptr<CompilationState> state)
 	{
-
+		std::vector<TokensGroup> tg = ToPostfixForm(right);
 
 
 		return std::vector<PseudoCommand>();
@@ -205,11 +221,11 @@ namespace Malachite
 	{
 		std::vector<PseudoCommand> result;
 
-		// 1. Обрабатываем правую часть (значение)
+		// 1. РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РїСЂР°РІСѓСЋ С‡Р°СЃС‚СЊ (Р·РЅР°С‡РµРЅРёРµ)
 		std::vector<PseudoCommand> right_commands = ProcessRightSide(right, state);
 		result.insert(result.end(), right_commands.begin(), right_commands.end());
 
-		// 2. Обрабатываем левую часть (куда сохранять)
+		// 2. РћР±СЂР°Р±Р°С‚С‹РІР°РµРј Р»РµРІСѓСЋ С‡Р°СЃС‚СЊ (РєСѓРґР° СЃРѕС…СЂР°РЅСЏС‚СЊ)
 		std::vector<PseudoCommand> left_commands = ProcessLeftSide(left, state);
 		result.insert(result.end(), left_commands.begin(), left_commands.end());
 

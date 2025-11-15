@@ -112,19 +112,19 @@ namespace Malachite
 		}
 		return result;
 	}
-	Token Lexer::ProcessOperator(const std::string& text, size_t& index)
+	Token Lexer::ProcessOperator(const std::string& text, size_t& index, std::vector<Token>& tokens)
 	{
 		//Multichar operators: <<= and etc
 
 		std::string operator_;
-
+		bool is_unary = (tokens.size() == 0) || (tokens.back().type != TokenType::IDENTIFIER && tokens.back().type != TokenType::LITERAL && tokens.back().value.strVal != ")");
 		for (; index < text.size(); index++)
 		{
 			char c = text[index];
 			if (GetTokenType(std::string(1, c)) == TokenType::OPERATOR)	operator_.push_back(c);
 			else break;
 		}
-
+		if (is_unary) operator_.push_back('u');
 		return Token(SyntaxInfo::GetTokenType(operator_),operator_,current_line,current_depth);
 	}
 	Token Lexer::InsertOpEnd(std::vector<Token>& tokens, int current_index, const std::string& text)
@@ -231,7 +231,7 @@ namespace Malachite
 						is_negative_value = true;
 						continue;
 					}
-					Token t = ProcessOperator(text, i);
+					Token t = ProcessOperator(text, i, result);
 					i--;
 					if (t.type == TokenType::UNDEFINED)
 					{

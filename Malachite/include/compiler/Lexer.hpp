@@ -25,7 +25,7 @@ namespace Malachite
 		char ProcessCharLiteral(const std::string& str);
 		std::string ProcessStringLiteral(const std::string& str);
 
-		Token ProcessOperator(const std::string& text, size_t& index);
+		Token ProcessOperator(const std::string& text, size_t& index, std::vector<Token>& tokens);
 
 		Token InsertOpEnd(std::vector<Token>& tokens, int current_index, const std::string& text);
 	public:

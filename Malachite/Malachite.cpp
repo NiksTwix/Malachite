@@ -3,6 +3,7 @@
 #include "include/core/functions.h"
 #include "include/compiler/Lexer.hpp"
 #include "include/compiler/ASTBuilder.hpp"
+#include "include/compiler/PseudoByteDecoder.hpp"
 #include <vector>
 using namespace MalachiteCore;
 
@@ -30,13 +31,35 @@ int main()
 	//ыexecute(&state, commands.data(), 4);
 
 	std::string code = R"CODE(
-	-123
-	-X
+	-123 + X * 3 / (2005+(6+5)) + func1(x*u+234,256)/30
 )CODE";
 
 	Malachite::Lexer lexer;
 	auto tokens = lexer.ToTokens(code);
-	Malachite::ASTBuilder astbuilder;
-	auto tree = astbuilder.BuildAST(tokens);
-	
+	//Malachite::ASTBuilder astbuilder;
+	//auto tree = astbuilder.BuildAST(tokens);
+	Malachite::ExpressionDecoder pbd;
+	auto r = pbd.ToPostfixForm(tokens);
+	for (auto& t : r) 
+	{
+		if (t.type == Malachite::TokenGroupType::SIMPLE)std::cout << t.token.value.ToString() << " ";
+		else 
+		{
+			std::cout << "(";
+			for (auto& t1 : t.tokens)
+			{
+				if (t1.type == Malachite::TokenGroupType::SIMPLE)std::cout << t1.token.value.ToString() << " ";
+				else 
+				{
+					for (auto& t2 : t1.tokens)
+					{
+						if (t2.type == Malachite::TokenGroupType::SIMPLE)std::cout << t2.token.value.ToString() << " ";
+					}
+					std::cout << ",";
+				}
+			}
+			std::cout << ")";
+		}
+	}
+
 }

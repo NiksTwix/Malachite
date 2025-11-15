@@ -188,6 +188,8 @@ namespace Malachite
             static std::unordered_map<std::string, TokenType> tokensMap = {
 				{"+", TokenType::OPERATOR},
 				{"-", TokenType::OPERATOR},
+                {"+u", TokenType::OPERATOR},
+                {"-u", TokenType::OPERATOR},
 				{"/", TokenType::OPERATOR},
 				{"*", TokenType::OPERATOR},
 				{"%", TokenType::OPERATOR},
@@ -264,7 +266,7 @@ namespace Malachite
                 {"(", -1}, {")", -1},  // special cases
 
                 // Уровень 8: унарные операторы
-                {"!", 8}, {"~", 8}, {"+", 8}, {"-", 8},  // унарные + и -, а также битовое НЕ
+                {"!", 8}, {"~", 8}, {"+u", 8}, {"-u", 8},  // унарные + и -, а также битовое НЕ u-unary
 
                 // Уровень 7: мультипликативные
                 {"*", 7}, {"/", 7}, {"%", 7},
