@@ -4,13 +4,13 @@
 
 namespace Malachite 
 {
-	std::vector<PseudoCommand> PseudoByteDecoder::GeneratePseudoCode(const ASTNode& node)
+	std::pair<std::shared_ptr<CompilationState>, std::vector<PseudoCommand>> PseudoByteDecoder::GeneratePseudoCode(const ASTNode& node)
 	{
 		compilation_state = std::make_shared<CompilationState>();
 
 		auto result = RecursiveHandle(node);
 
-		return result;
+		return std::pair<std::shared_ptr<CompilationState>, std::vector<PseudoCommand>>(compilation_state,result);
 	}
 	std::vector<PseudoCommand> PseudoByteDecoder::RecursiveHandle(const ASTNode& node)
 	{

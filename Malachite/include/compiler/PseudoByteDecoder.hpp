@@ -11,7 +11,7 @@ namespace Malachite
 		std::vector<PseudoCommand> RecursiveHandle(const ASTNode& node);
 		ExpressionDecoder ex_decoder;
 	public:
-		std::vector<PseudoCommand> GeneratePseudoCode(const ASTNode& node);
+		std::pair<std::shared_ptr<CompilationState>,std::vector<PseudoCommand>> GeneratePseudoCode(const ASTNode& node);
 	};
 }
 

@@ -20,6 +20,11 @@ namespace Malachite
         OPERATION_END = 0,  //End of operation
         SCOPE_START,    //Start of variable scope
         SCOPE_END,      //End of variable scope
+        FUNCTION_CALL,  //function(params)
+        OFFSET_ACCESS,  //array[index]
+
+        FIELD_ACCESS,   //For class.field
+        METHOD_CALL,     //For class.method(params)
     };
 
 
@@ -180,6 +185,73 @@ namespace Malachite
 		size_t depth;  // Уровень вложенности
 	};
 
+    //Pseudo byte code
+
+
+    enum class PseudoOpCode : uint8_t
+    {
+        //Stack principe: lower value is left, higher is right
+        Nop,
+        Immediate,          // Push literal contant
+        Push,               // Push to stack (for functions)
+        Pop,
+        Load,               //Load "variable"/pointer
+        Store,              //Store "variable"/pointer
+        LoadOffset,         //Load      "variable"-startpointer     "variable"/constant-offset     
+        StoreOffset,        //Store    "variable"-startpointer     "variable"/constant-offset
+
+        //For array and OOP
+        LoadDirect,         //Load from direct address in memory
+        StoreDirect,        //Store in direct address in memory
+        GetAddress,         //Returns address in heap or stack
+
+        ScopeStart,
+        ScopeEnd,
+
+        Label,      //label label_Type label_name
+
+        DeclareVariable,    //Declaring of variable, parameters are name and vm_type (double/int64/uint64), but creating writting in variable table with fact type (string and another)
+        DeclareFunction,    //Declaring of function, parameters are name and return type_id, code after DeclareFunction and ScopeStart is function body.
+        //Arithmetic
+        Add,
+        Subtract,
+        Multiplication,
+        Division,
+        Mod,
+        Negative,
+
+        // Logic
+        And,
+        Or,
+        Not,
+        Compare,
+        Abode,
+        Less,
+        BitOr,
+        BitNot,
+        BitAnd,
+        BitOffsetLeft,
+        BitOffsetRight,
+
+        //Control flow
+        Jump,
+        JumpIf,
+        JumpNotIf,
+        Call,
+        Return
+        //System calls ->  welcome to op_code {...}
+
+        //OOP
+        // Creates object -> calls constructor
+    };
+
+    struct PseudoCommand
+    {
+        PseudoOpCode op_code;
+        std::unordered_map<std::string, TokenValue> parameters; //Example,  op_code: DeclareVariable, parameters: name-"x"
+    };
+
+
     class SyntaxInfo 
     {
     private:
@@ -188,7 +260,7 @@ namespace Malachite
             static std::unordered_map<std::string, TokenType> tokensMap = {
 				{"+", TokenType::OPERATOR},
 				{"-", TokenType::OPERATOR},
-                {"+u", TokenType::OPERATOR},
+                {"+u", TokenType::OPERATOR},    //u-unary
                 {"-u", TokenType::OPERATOR},
 				{"/", TokenType::OPERATOR},
 				{"*", TokenType::OPERATOR},
@@ -205,7 +277,7 @@ namespace Malachite
 				{"<",TokenType::OPERATOR},
 				{">=",TokenType::OPERATOR},
 				{"<=",TokenType::OPERATOR},
-				{"->",TokenType::OPERATOR},     //Operator of returned function's type
+				{"->",TokenType::OPERATOR},     //Operator of returned function's type or implication (in the future)
 				{">>",TokenType::OPERATOR},
 				{"<<",TokenType::OPERATOR},
 				{">>=",TokenType::OPERATOR},
@@ -300,6 +372,33 @@ namespace Malachite
             };
             return tokensMap;
         }
+
+        static std::unordered_map<std::string, PseudoOpCode>& GetOperatorsPseudoMap() 
+        {
+            static std::unordered_map<std::string, PseudoOpCode> tokensMap =
+            {
+                {"+",PseudoOpCode::Add},
+                {"-",PseudoOpCode::Subtract},
+                {"*",PseudoOpCode::Multiplication},
+                {"/",PseudoOpCode::Division},
+                {"%",PseudoOpCode::Mod},
+                {"-u",PseudoOpCode::Negative},
+                {"&&",PseudoOpCode::And},
+                {"||",PseudoOpCode::Or},
+                {"!",PseudoOpCode::Not},
+                {"==",PseudoOpCode::Compare},
+                {"|",PseudoOpCode::BitOr},
+                {"~",PseudoOpCode::BitNot},
+                {"&",PseudoOpCode::BitAnd},
+                {"<<",PseudoOpCode::BitOffsetLeft},
+                {">>",PseudoOpCode::BitOffsetRight},
+                {">",PseudoOpCode::Abode},
+                {"<",PseudoOpCode::Less},
+                //{"->",PseudoOpCode::Implication},
+            };
+            return tokensMap;
+        }
+
     public:
         static TokenType GetTokenType(const std::string& string_token) 
         {
@@ -311,69 +410,13 @@ namespace Malachite
             auto map = GetTokensOperationsPriorityMap();
             return map.count(token.value.strVal) ? map[token.value.strVal] : -1;
         }
+        static PseudoOpCode GetOperatorPseudoCode(const Token& token)
+        {
+            auto map = GetOperatorsPseudoMap();
+            return map.count(token.value.strVal) ? map[token.value.strVal] : PseudoOpCode::Nop;
+        }
     };
 
     
-    //Pseudo byte code
-
-
-    enum class PseudoOpCode: uint8_t 
-    {
-        //Stack principe: lower value is left, higher is right
-        Nop,
-        Push,           // Push constant
-        Pop,
-        Load,               //Load "variable"/pointer
-        Store,              //Store "variable"/pointer
-        LoadOffset,         //Load      "variable"-startpointer     "variable"/constant-offset     
-        StoreOffset,        //Store    "variable"-startpointer     "variable"/constant-offset
-
-        //For array and OOP
-        LoadDirect,         //Load from direct address in memory
-        StoreDirect,        //Store in direct address in memory
-        GetAddress,         //Returns address in heap or stack
-
-        ScopeStart,
-        ScopeEnd,
-
-        Label,      //label label_Type label_name
-
-        DeclareVariable,    //Declaring of variable, parameters are name and vm_type (double/int64/uint64), but creating writting in variable table with fact type (string and another)
-        DeclareFunction,    //Declaring of function, parameters are name and return type_id, code after DeclareFunction and ScopeStart is function body.
-        //Arithmetic
-        Add,
-        Subtract,
-        Multiplication,
-        Division,
-        Mod,
-        Negative,
-
-        // Logic
-        And,
-        Or,
-        Not,
-        Compare,
-        BitOr,
-        BitNot,
-        BitAnd,
-        BitOffsetLeft,
-        BitOffsetRight,
-
-        //Control flow
-        Jump,
-        JumpIf,
-        JumpNotIf,
-        Call,
-        Return
-        //System calls ->  welcome to op_code {...}
-
-        //OOP
-        // Creates object -> calls constructor
-    };
-
-    struct PseudoCommand 
-    {
-        PseudoOpCode op_code;
-        std::unordered_map<std::string, TokenValue> parameters; //Example,  op_code: DeclareVariable parameters: name-"x"
-    };
+    
 }

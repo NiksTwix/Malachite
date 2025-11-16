@@ -3,38 +3,53 @@
 #include <vector>
 #include "Definitions.hpp"
 #include <stdexcept>
-
+#include <memory>
 namespace Malachite 
 {
 	using typeID = size_t;
 	using functionID = size_t;
-
+	using variableID = size_t;
+	using visibleFrameID = size_t;
 	struct Variable 
 	{
-		const std::string name;
-		const typeID type_id;
+	private:
+		static variableID GetGlobalID() { static variableID global_id = 1; return global_id++; }
+	public:
+		variableID variable_id;
+		std::string name;
+		typeID type_id;
 		union {
 			double d;
 			int64_t i;
 			uint64_t u;
 		};
 		uint64_t stack_offset;
-		const bool is_const = false;
+		
+		bool is_const = false;
 		Variable() : name(""), type_id(0) {}
-		Variable(const std::string& name, typeID type_id, bool is_const = false) : name(name), type_id(type_id), is_const(is_const) {}
-		Variable(const std::string& name, typeID type_id, uint64_t stack_offset, bool is_const = false) : name(name), type_id(type_id), stack_offset(stack_offset), is_const(is_const) {}
+		Variable(const std::string& name, typeID type_id, bool is_const = false) : variable_id(GetGlobalID()), name(name), type_id(type_id), is_const(is_const) {}
+		Variable(const std::string& name, typeID type_id, uint64_t stack_offset, bool is_const = false) : variable_id(GetGlobalID()),name(name), type_id(type_id), stack_offset(stack_offset), is_const(is_const) {}
+
+		Variable(const Variable& other) : variable_id(other.variable_id),name(other.name), type_id(other.type_id), stack_offset(other.stack_offset),  is_const(other.is_const)
+		{
+			u = other.u;
+		}
 	};
 	struct Function
 	{
 	private:
 		static functionID GetGlobalID() { static functionID global_id = 1; return global_id++; }		
 	public:
-		const typeID return_type;
-		const functionID function_id;
-		const std::string name;
+		typeID return_type;
+		functionID function_id;
+		std::string name;
 		std::vector<Variable> args;	//для сравнения и проверки при попытке вызова
 		Function(const std::string& name, typeID return_type, std::vector<Variable>& args) : function_id(GetGlobalID()), name(name), args(args), return_type(return_type){}
 		Function() : return_type(0), function_id(0),name("function") {}
+		Function(const Function& other) : function_id(other.function_id), name(other.name), return_type(other.return_type)
+		{
+			args = other.args;
+		}
 	};
 	struct VariableTable
 	{
@@ -55,6 +70,8 @@ namespace Malachite
 			if (variables_str.count(var.name)) throw std::runtime_error("Variable with name=" + var.name + " already exists.");
 			variables_str.emplace(var.name, std::move(var));
 		}
+
+		
 	};
 
 	struct FunctionsTable 
@@ -96,19 +113,26 @@ namespace Malachite
 		static typeID GetGlobalID() { static typeID global_id = 1; return global_id++; }		//0 is basic for int and double
 	public:
 		enum class Category {PRIMITIVE,ALIAS,CLASS};
-		const Category category;
-		const typeID type_id;
-		const typeID parent_type_id;
-		const std::string name = "type";
+		Category category;
+		typeID type_id;
+		typeID parent_type_id;
+		std::string name = "type";
 
 		FunctionsTable methods_table;
 		VariableTable fields_table;
 
 		size_t size;
 
-		Type(Category category, const std::string& name, typeID parent_type_id) : category(category), type_id(GetGlobalID()),  name(name), parent_type_id(parent_type_id){}
-		Type(Category category, const std::string& name) : category(category), type_id(GetGlobalID()), name(name), parent_type_id(0) {}
+		Type(Category category, const std::string& name, typeID parent_type_id) : category(category), type_id(GetGlobalID()), parent_type_id(parent_type_id), name(name) {}
+		Type(Category category, const std::string& name) : category(category), type_id(GetGlobalID()), parent_type_id(0), name(name) {}
 		Type() : category(Category::PRIMITIVE), type_id(0), parent_type_id(0) {}
+
+		Type(const Type& other) : category(other.category), type_id(other.type_id), parent_type_id(other.parent_type_id), name(other.name)
+		{
+			methods_table = other.methods_table;
+			fields_table = other.fields_table;
+		}
+
 	};
 
 	struct TypesTable		//Table for user types
@@ -149,9 +173,14 @@ namespace Malachite
 
 	struct VisibleFrame  //Кадр области видимости
 	{
+	private:
+		static visibleFrameID GetGlobalID() { static visibleFrameID global_id = 1; return global_id++; }
+	public:
 		VariableTable variables_table;
 		TypesTable types_table;
 		FunctionsTable functions_table;
+		visibleFrameID vfid;
+		VisibleFrame() : vfid(GetGlobalID()) {}
 	};
 
 	//Пока что без именованных пространств
@@ -171,8 +200,15 @@ namespace Malachite
 	struct CompilationState 
 	{
 		std::string program_name = "program";
-		std::vector<VisibleFrame> spaces;	//если компилятор не находит type или переменную в нынешнем scope, то поднимается на 1 и ищет уже, переменная depth в декодере
 
+		//For checks and recursion
+		std::vector<std::shared_ptr<VisibleFrame>> spaces;	//если компилятор не находит type или переменную в нынешнем scope, то поднимается на 1 и ищет уже там, переменная depth в декодере
+
+		//Global information
+		std::unordered_map<typeID, Type> types_global_table;
+		std::unordered_map<visibleFrameID, std::shared_ptr<VisibleFrame>> visible_frames_global_table;
+		std::unordered_map<variableID, Variable> variables_global_table;
+		std::unordered_map<functionID, Function> functions_global_table;
 		//std::vector<PseudoCommand> pseudo_commands;
 
 		CompilationState() 
@@ -180,23 +216,51 @@ namespace Malachite
 			spaces.emplace_back();
 			Type void_type(Type::Category::PRIMITIVE, "void");
 			void_type.size = 1;
-			spaces[0].types_table.AddType(void_type);
+			AddTypeToSpace(0, void_type);
 			Type int_type(Type::Category::PRIMITIVE, "int");
 			int_type.size = 8;
-			spaces[0].types_table.AddType(int_type);
+			AddTypeToSpace(0, int_type);
 			Type float_type(Type::Category::PRIMITIVE, "float");
 			float_type.size = 8;
-			spaces[0].types_table.AddType(float_type);
+			AddTypeToSpace(0, float_type);
 			Type bool_type(Type::Category::PRIMITIVE, "bool");
 			bool_type.size = 1;
-			spaces[0].types_table.AddType(bool_type);
+			AddTypeToSpace(0, bool_type);
 			Type char_type(Type::Category::PRIMITIVE, "char");
 			char_type.size = 1;
-			spaces[0].types_table.AddType(char_type);
+			AddTypeToSpace(0, char_type);
 		}
-		VisibleFrame* GetSpace(size_t depth = 0) { return depth < spaces.size() ? &spaces[depth]: nullptr; }
-		VisibleFrame* GetCurrentSpace() { return spaces.size() > 0 ? &spaces[spaces.size()] : nullptr; }
-		void PushSpace() { spaces.emplace_back(); }
+
+		void AddTypeToSpace(size_t space, Type& type)
+		{
+			VisibleFrame* vf = GetSpace(space);
+			if (!space) return;
+			vf->types_table.AddType(type);
+			types_global_table.emplace(type.type_id, Type(type));	//adds to global_table
+		}
+		void AddVariableToSpace(size_t space, Variable& variable)
+		{
+			VisibleFrame* vf = GetSpace(space);
+			if (!space) return;
+			vf->variables_table.AddVariable(variable);
+			variables_global_table.emplace(variable.variable_id, Variable(variable));	//adds to global_table
+		}
+		void AddTypeToSpace(size_t space, Function& function)
+		{
+			VisibleFrame* vf = GetSpace(space);
+			if (!space) return;
+			vf->functions_table.AddFunction(function);
+			functions_global_table.emplace(function.function_id, Function(function));	//adds to global_table
+		}
+
+		VisibleFrame* GetSpace(size_t depth = 0) { return depth < spaces.size() ? spaces[depth].get() : nullptr; }
+		VisibleFrame* GetCurrentSpace() { return spaces.size() > 0 ? spaces[spaces.size()].get() : nullptr; }
+		void PushSpace() 
+		{ 
+			std::shared_ptr<VisibleFrame> vf = std::make_shared<VisibleFrame>();
+			spaces.push_back(vf);
+			visible_frames_global_table.insert({ vf->vfid,vf });
+		}
 		void PopSpace() { if (spaces.size() > 0) spaces.pop_back(); }
 		bool HasSpaces() { return spaces.size() > 0; }
 		size_t GetSpacesDepth() { return spaces.size()-1; }

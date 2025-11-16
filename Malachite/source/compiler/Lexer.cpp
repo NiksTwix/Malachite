@@ -163,7 +163,7 @@ namespace Malachite
 			{
 				current_line++;
 			}
-			// Пропуск однострочных комментариев
+			// Simple line comments
 			if (!in_string)
 			{
 				if (c == '/' && i + 1 < text.size() && text[i + 1] == '/') {
@@ -175,7 +175,7 @@ namespace Malachite
 					i--;	//чтобы вернуть \n
 					continue;
 				}
-				//Multilines comment
+				//Multilines comments
 				if (c == '/' && i + 1 < text.size() && text[i + 1] == '*') {
 					char prev = text[i];
 					i++;
