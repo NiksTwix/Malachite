@@ -31,35 +31,26 @@ int main()
 	//ыexecute(&state, commands.data(), 4);
 
 	std::string code = R"CODE(
-	-123 + X * 3 / (2005+(6+5)) + func1(x*u+234,256)/30
+	float y = 100;
+	int x = -123 / (232 + 234 *34) + y;
 )CODE";
 
 	Malachite::Lexer lexer;
 	auto tokens = lexer.ToTokens(code);
-	//Malachite::ASTBuilder astbuilder;
-	//auto tree = astbuilder.BuildAST(tokens);
-	Malachite::ExpressionDecoder pbd;
-	auto r = pbd.ToPostfixForm(tokens);
-	for (auto& t : r) 
+	Malachite::ASTBuilder astbuilder;
+	auto tree = astbuilder.BuildAST(tokens);
+	Malachite::PseudoByteDecoder pbd;
+	auto r = pbd.GeneratePseudoCode(tree);
+
+	for (auto& t : r.second) 
 	{
-		if (t.type == Malachite::TokenGroupType::SIMPLE)std::cout << t.token.value.ToString() << " ";
-		else 
+		std::string output;
+		output += Malachite::SyntaxInfo::GetPseudoString(t.op_code) + " ";
+		for (auto& t1 : t.parameters) 
 		{
-			std::cout << "(";
-			for (auto& t1 : t.tokens)
-			{
-				if (t1.type == Malachite::TokenGroupType::SIMPLE)std::cout << t1.token.value.ToString() << " ";
-				else 
-				{
-					for (auto& t2 : t1.tokens)
-					{
-						if (t2.type == Malachite::TokenGroupType::SIMPLE)std::cout << t2.token.value.ToString() << " ";
-					}
-					std::cout << ",";
-				}
-			}
-			std::cout << ")";
+			output += t1.first + ":" + t1.second.ToString() + " ";
 		}
+		Malachite::Logger::Get().PrintInfo(output);
 	}
 
 }

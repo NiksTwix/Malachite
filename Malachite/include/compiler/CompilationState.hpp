@@ -15,15 +15,15 @@ namespace Malachite
 	private:
 		static variableID GetGlobalID() { static variableID global_id = 1; return global_id++; }
 	public:
-		variableID variable_id;
-		std::string name;
-		typeID type_id;
+		variableID variable_id{};
+		std::string name{};
+		typeID type_id{};
 		union {
 			double d;
 			int64_t i;
-			uint64_t u;
+			uint64_t u = 0;
 		};
-		uint64_t stack_offset;
+		uint64_t stack_offset{};
 		
 		bool is_const = false;
 		Variable() : name(""), type_id(0) {}
@@ -40,12 +40,12 @@ namespace Malachite
 	private:
 		static functionID GetGlobalID() { static functionID global_id = 1; return global_id++; }		
 	public:
-		typeID return_type;
-		functionID function_id;
-		std::string name;
-		std::vector<Variable> args;	//для сравнения и проверки при попытке вызова
+		typeID return_type{};
+		functionID function_id{};
+		std::string name{};
+		std::vector<Variable> args{};	//для сравнения и проверки при попытке вызова
 		Function(const std::string& name, typeID return_type, std::vector<Variable>& args) : function_id(GetGlobalID()), name(name), args(args), return_type(return_type){}
-		Function() : return_type(0), function_id(0),name("function") {}
+		Function() : return_type(0), function_id(0), name("function") { args = {}; }
 		Function(const Function& other) : function_id(other.function_id), name(other.name), return_type(other.return_type)
 		{
 			args = other.args;
@@ -53,7 +53,7 @@ namespace Malachite
 	};
 	struct VariableTable
 	{
-		std::unordered_map<std::string, Variable> variables_str;
+		std::unordered_map<std::string, Variable> variables_str{};
 
 		bool IsExists(std::string name) const
 		{
@@ -70,14 +70,14 @@ namespace Malachite
 			if (variables_str.count(var.name)) throw std::runtime_error("Variable with name=" + var.name + " already exists.");
 			variables_str.emplace(var.name, std::move(var));
 		}
-
+		VariableTable() = default;
 		
 	};
 
 	struct FunctionsTable 
 	{
-		std::unordered_map<std::string, std::vector<functionID>> functions_str;	//vector for overloading
-		std::unordered_map<functionID, Function> functions;
+		std::unordered_map<std::string, std::vector<functionID>> functions_str{};	//vector for overloading
+		std::unordered_map<functionID, Function> functions{};
 		//type tree and etc
 	public:
 		Function& operator[](functionID id)
@@ -105,6 +105,7 @@ namespace Malachite
 			functions_str[func.name].push_back(func.function_id);
 			functions.emplace(func.function_id, std::move(func));
 		}
+		FunctionsTable() = default;
 	};
 
 	struct Type 
@@ -113,15 +114,15 @@ namespace Malachite
 		static typeID GetGlobalID() { static typeID global_id = 1; return global_id++; }		//0 is basic for int and double
 	public:
 		enum class Category {PRIMITIVE,ALIAS,CLASS};
-		Category category;
-		typeID type_id;
-		typeID parent_type_id;
+		Category category{};
+		typeID type_id{};
+		typeID parent_type_id{};
 		std::string name = "type";
 
-		FunctionsTable methods_table;
-		VariableTable fields_table;
+		FunctionsTable methods_table{};
+		VariableTable fields_table{};
 
-		size_t size;
+		size_t size{};
 
 		Type(Category category, const std::string& name, typeID parent_type_id) : category(category), type_id(GetGlobalID()), parent_type_id(parent_type_id), name(name) {}
 		Type(Category category, const std::string& name) : category(category), type_id(GetGlobalID()), parent_type_id(0), name(name) {}
@@ -138,8 +139,8 @@ namespace Malachite
 	struct TypesTable		//Table for user types
 	{
 	private:
-		std::unordered_map<typeID, Type> types;
-		std::unordered_map<std::string, typeID> types_str;
+		std::unordered_map<typeID, Type> types{};
+		std::unordered_map<std::string, typeID> types_str{};
 		//type tree and etc
 	public:
 		Type& operator[](typeID id)
@@ -169,6 +170,7 @@ namespace Malachite
 			types_str.emplace(type.name, type.type_id);
 			types.emplace(type.type_id, std::move(type));
 		}
+		TypesTable() = default;
 	};
 
 	struct VisibleFrame  //Кадр области видимости
@@ -176,11 +178,14 @@ namespace Malachite
 	private:
 		static visibleFrameID GetGlobalID() { static visibleFrameID global_id = 1; return global_id++; }
 	public:
-		VariableTable variables_table;
-		TypesTable types_table;
-		FunctionsTable functions_table;
+		VariableTable variables_table{};
+		TypesTable types_table{};
+		FunctionsTable functions_table{};
 		visibleFrameID vfid;
-		VisibleFrame() : vfid(GetGlobalID()) {}
+		VisibleFrame() : vfid(GetGlobalID()) 
+		{
+		}
+
 	};
 
 	//Пока что без именованных пространств
@@ -202,59 +207,63 @@ namespace Malachite
 		std::string program_name = "program";
 
 		//For checks and recursion
-		std::vector<std::shared_ptr<VisibleFrame>> spaces;	//если компилятор не находит type или переменную в нынешнем scope, то поднимается на 1 и ищет уже там, переменная depth в декодере
+		std::vector<std::shared_ptr<VisibleFrame>> spaces{};	//если компилятор не находит type или переменную в нынешнем scope, то поднимается на 1 и ищет уже там, переменная depth в декодере
 
 		//Global information
-		std::unordered_map<typeID, Type> types_global_table;
-		std::unordered_map<visibleFrameID, std::shared_ptr<VisibleFrame>> visible_frames_global_table;
-		std::unordered_map<variableID, Variable> variables_global_table;
-		std::unordered_map<functionID, Function> functions_global_table;
+		std::unordered_map<typeID, Type> types_global_table{};
+		std::unordered_map<visibleFrameID, std::shared_ptr<VisibleFrame>> visible_frames_global_table{};
+		std::unordered_map<variableID, Variable> variables_global_table{};
+		std::unordered_map<functionID, Function> functions_global_table{};
 		//std::vector<PseudoCommand> pseudo_commands;
 
 		CompilationState() 
 		{
-			spaces.emplace_back();
+			std::shared_ptr<VisibleFrame> vs = std::make_shared<VisibleFrame>();
+			spaces.push_back(vs);
 			Type void_type(Type::Category::PRIMITIVE, "void");
 			void_type.size = 1;
-			AddTypeToSpace(0, void_type);
+			AddTypeToSpace(1, void_type);
 			Type int_type(Type::Category::PRIMITIVE, "int");
 			int_type.size = 8;
-			AddTypeToSpace(0, int_type);
+			AddTypeToSpace(1, int_type);
 			Type float_type(Type::Category::PRIMITIVE, "float");
 			float_type.size = 8;
-			AddTypeToSpace(0, float_type);
+			AddTypeToSpace(1, float_type);
 			Type bool_type(Type::Category::PRIMITIVE, "bool");
 			bool_type.size = 1;
-			AddTypeToSpace(0, bool_type);
+			AddTypeToSpace(1, bool_type);
 			Type char_type(Type::Category::PRIMITIVE, "char");
 			char_type.size = 1;
-			AddTypeToSpace(0, char_type);
+			AddTypeToSpace(1, char_type);
 		}
 
 		void AddTypeToSpace(size_t space, Type& type)
 		{
 			VisibleFrame* vf = GetSpace(space);
-			if (!space) return;
+			if (!vf) return;
 			vf->types_table.AddType(type);
 			types_global_table.emplace(type.type_id, Type(type));	//adds to global_table
 		}
 		void AddVariableToSpace(size_t space, Variable& variable)
 		{
 			VisibleFrame* vf = GetSpace(space);
-			if (!space) return;
+			if (!vf) return;
 			vf->variables_table.AddVariable(variable);
 			variables_global_table.emplace(variable.variable_id, Variable(variable));	//adds to global_table
 		}
-		void AddTypeToSpace(size_t space, Function& function)
+		void AddFunctionToSpace(size_t space, Function& function)
 		{
 			VisibleFrame* vf = GetSpace(space);
-			if (!space) return;
+			if (!vf) return;
 			vf->functions_table.AddFunction(function);
 			functions_global_table.emplace(function.function_id, Function(function));	//adds to global_table
 		}
 
-		VisibleFrame* GetSpace(size_t depth = 0) { return depth < spaces.size() ? spaces[depth].get() : nullptr; }
-		VisibleFrame* GetCurrentSpace() { return spaces.size() > 0 ? spaces[spaces.size()].get() : nullptr; }
+		VisibleFrame* GetSpace(size_t depth = 1) //depth min = 1
+		{
+			return depth > 0 && depth <= spaces.size() ? spaces[depth-1].get() : nullptr;
+		}
+		VisibleFrame* GetCurrentSpace() { return spaces.size() > 0 ? spaces[spaces.size()-1].get() : nullptr; }
 		void PushSpace() 
 		{ 
 			std::shared_ptr<VisibleFrame> vf = std::make_shared<VisibleFrame>();
@@ -263,7 +272,7 @@ namespace Malachite
 		}
 		void PopSpace() { if (spaces.size() > 0) spaces.pop_back(); }
 		bool HasSpaces() { return spaces.size() > 0; }
-		size_t GetSpacesDepth() { return spaces.size()-1; }
+		size_t GetSpacesDepth() { return spaces.size(); }
 
 	};
 }

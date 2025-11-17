@@ -32,6 +32,8 @@ namespace MalachiteCore
         OP_BIT_AND_RRR,
         OP_BIT_OFFSET_LEFT_RRR,
         OP_BIT_OFFSET_RIGHT_RRR,
+        //OP_GT
+        //OP_LS
         // ... 60
 
         // Memory [61-80]

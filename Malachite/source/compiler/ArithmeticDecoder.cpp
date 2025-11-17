@@ -7,27 +7,40 @@ namespace Malachite
 	Type* ExpressionDecoder::FindType(std::shared_ptr<CompilationState> state, const std::string& type_name)
 	{
 		size_t current_depth = state->GetSpacesDepth();
-		for (; current_depth >= 0; current_depth--) 
+		for (; current_depth > 0; current_depth--) 
 		{
-			if (state->GetSpace(current_depth)->types_table.IsExists(type_name)) return &state->GetSpace(current_depth)->types_table[type_name];
+			auto space = state->GetSpace(current_depth);
+			if (space && space->types_table.IsExists(type_name))
+			{
+				return &space->types_table[type_name];
+			}
 		}
 		return nullptr;
 	}
 	Variable* ExpressionDecoder::FindVariable(std::shared_ptr<CompilationState> state, const std::string& variable_name)
 	{
 		size_t current_depth = state->GetSpacesDepth();
-		for (; current_depth >= 0; current_depth--)
-		{
-			if (state->GetSpace(current_depth)->variables_table.IsExists(variable_name)) return &state->GetSpace(current_depth)->variables_table[variable_name];
+		for (; current_depth > 0; current_depth--)
+		{ 
+			auto space = state->GetSpace(current_depth);
+			if (space && space->variables_table.IsExists(variable_name))
+			{
+				return &space->variables_table[variable_name];
+			}
+
 		}
 		return nullptr;
 	}
 	const std::vector<functionID>* ExpressionDecoder::FindFunctions(std::shared_ptr<CompilationState> state, const std::string& function_name)
 	{
 		size_t current_depth = state->GetSpacesDepth();
-		for (; current_depth >= 0; current_depth--)
+		for (; current_depth > 0; current_depth--)
 		{
-			if (state->GetSpace(current_depth)->functions_table.IsExists(function_name)) return &state->GetSpace(current_depth)->functions_table[function_name];
+			auto space = state->GetSpace(current_depth);
+			if (space && space->functions_table.IsExists(function_name))
+			{
+				return &space->functions_table[function_name];
+			}
 		}
 		return nullptr;
 	}
@@ -131,6 +144,7 @@ namespace Malachite
 		if (!functions)
 		{
 			Logger::Get().PrintLogicError("Functions overloadings with name \"" + func_name + "\" dont exist.", postfix[1].token.line);
+			return std::vector<PseudoCommand>();
 		}
 		//Args handling
 		std::vector<PseudoCommand> result;
@@ -340,10 +354,10 @@ namespace Malachite
 
 	std::vector<PseudoCommand> ExpressionDecoder::ProcessRightSide(const std::vector<Token>& right, std::shared_ptr<CompilationState> state)
 	{
-		std::vector<TokensGroup> tg = ToPostfixForm(right);
+		std::vector<TokensGroup> tgs = ToPostfixForm(right);
 
 
-		return std::vector<PseudoCommand>();
+		return PostfixToPseudo(tgs,state);
 	}
 
 	std::vector<PseudoCommand> ExpressionDecoder::DecodeAssignExpression(const std::vector<Token>& left, const std::vector<Token>& right, std::shared_ptr<CompilationState> state)
@@ -390,12 +404,18 @@ namespace Malachite
 
 			if (t.type == TokenType::OPERATOR && SyntaxInfo::GetOperationPriority(t) == -1)
 			{
-				std::vector<Token> right = StringOperations::TrimVector<Token>(node.tokens, i,node.tokens.size() - 1);
+				std::vector<Token> right = StringOperations::TrimVector<Token>(node.tokens, i+1,node.tokens.size() - 1);
 				result = DecodeAssignExpression(temp_tokens, right, state);
+				temp_tokens.clear();
 				break;
 			}
 			
 			temp_tokens.push_back(t);
+		}
+		if (!temp_tokens.empty()) 
+		{
+			std::vector<PseudoCommand> commands = ProcessRightSide(temp_tokens, state);
+			result.insert(result.end(), commands.begin(), commands.end());
 		}
 		return result;
 	}

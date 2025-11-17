@@ -224,9 +224,12 @@ namespace Malachite
         And,
         Or,
         Not,
-        Compare,
-        Abode,
+        Equal,
+        NotEqual,
+        Greater,
         Less,
+        GreaterEqual,
+        LessEqual,
         BitOr,
         BitNot,
         BitAnd,
@@ -386,17 +389,69 @@ namespace Malachite
                 {"&&",PseudoOpCode::And},
                 {"||",PseudoOpCode::Or},
                 {"!",PseudoOpCode::Not},
-                {"==",PseudoOpCode::Compare},
+                {"==",PseudoOpCode::Equal},
+                {"!=",PseudoOpCode::NotEqual},
                 {"|",PseudoOpCode::BitOr},
                 {"~",PseudoOpCode::BitNot},
                 {"&",PseudoOpCode::BitAnd},
                 {"<<",PseudoOpCode::BitOffsetLeft},
                 {">>",PseudoOpCode::BitOffsetRight},
-                {">",PseudoOpCode::Abode},
+                {">",PseudoOpCode::Greater},
                 {"<",PseudoOpCode::Less},
+                {">=",PseudoOpCode::GreaterEqual},
+                {"<=",PseudoOpCode::LessEqual},
                 //{"->",PseudoOpCode::Implication},
             };
             return tokensMap;
+        }
+
+        static std::unordered_map<PseudoOpCode, std::string>& GetStringPseudoMap() 
+        {
+            static std::unordered_map<PseudoOpCode, std::string> PseudoOpCodeToString = {
+                {PseudoOpCode::Nop, "Nop"},
+                {PseudoOpCode::Immediate, "Immediate"},
+                {PseudoOpCode::Push, "Push"},
+                {PseudoOpCode::Pop, "Pop"},
+                {PseudoOpCode::Load, "Load"},
+                {PseudoOpCode::Store, "Store"},
+                {PseudoOpCode::LoadOffset, "LoadOffset"},
+                {PseudoOpCode::StoreOffset, "StoreOffset"},
+                {PseudoOpCode::LoadDirect, "LoadDirect"},
+                {PseudoOpCode::StoreDirect, "StoreDirect"},
+                {PseudoOpCode::GetAddress, "GetAddress"},
+                {PseudoOpCode::ScopeStart, "ScopeStart"},
+                {PseudoOpCode::ScopeEnd, "ScopeEnd"},
+                {PseudoOpCode::Label, "Label"},
+                {PseudoOpCode::DeclareVariable, "DeclareVariable"},
+                {PseudoOpCode::DeclareFunction, "DeclareFunction"},
+                {PseudoOpCode::Add, "Add"},
+                {PseudoOpCode::Subtract, "Subtract"},
+                {PseudoOpCode::Multiplication, "Multiplication"},
+                {PseudoOpCode::Division, "Division"},
+                {PseudoOpCode::Mod, "Mod"},
+                {PseudoOpCode::Negative, "Negative"},
+                {PseudoOpCode::And, "And"},
+                {PseudoOpCode::Or, "Or"},
+                {PseudoOpCode::Not, "Not"},
+                {PseudoOpCode::Equal, "Equal"},
+                {PseudoOpCode::NotEqual, "NotEqual"},
+                {PseudoOpCode::Greater, "Greater"},
+                {PseudoOpCode::Less, "Less"},
+                {PseudoOpCode::GreaterEqual, "GreaterEqual"},
+                {PseudoOpCode::LessEqual, "LessEqual"},
+                {PseudoOpCode::BitOr, "BitOr"},
+                {PseudoOpCode::BitNot, "BitNot"},
+                {PseudoOpCode::BitAnd, "BitAnd"},
+                {PseudoOpCode::BitOffsetLeft, "BitOffsetLeft"},
+                {PseudoOpCode::BitOffsetRight, "BitOffsetRight"},
+                {PseudoOpCode::Jump, "Jump"},
+                {PseudoOpCode::JumpIf, "JumpIf"},
+                {PseudoOpCode::JumpNotIf, "JumpNotIf"},
+                {PseudoOpCode::Call, "Call"},
+                {PseudoOpCode::Return, "Return"}
+            };
+
+            return PseudoOpCodeToString;
         }
 
     public:
@@ -414,6 +469,11 @@ namespace Malachite
         {
             auto map = GetOperatorsPseudoMap();
             return map.count(token.value.strVal) ? map[token.value.strVal] : PseudoOpCode::Nop;
+        }
+        static std::string GetPseudoString(const PseudoOpCode& code)
+        {
+            auto map = GetStringPseudoMap();
+            return map.count(code) ? map[code] : "Nop";
         }
     };
 
