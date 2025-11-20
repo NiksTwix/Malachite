@@ -54,24 +54,35 @@ namespace Malachite
 	struct VariableTable
 	{
 		std::unordered_map<std::string, Variable> variables_str{};
+		std::unordered_map<variableID, Variable> variables{};
 
 		bool IsExists(std::string name) const
 		{
 			return variables_str.count(name);
+		}
+		bool IsExists(variableID id) const
+		{
+			return variables.count(id);
 		}
 		Variable& operator[](std::string variable_name)
 		{
 			if (!variables_str.count(variable_name)) throw std::runtime_error("Type with name=" + variable_name + " isnt exists.");
 			return variables_str[variable_name];
 		}
+		Variable& operator[](variableID id)
+		{
+			if (!variables.count(id)) throw std::runtime_error("Type with id=" + std::to_string(id) + " isnt exists.");
+			return variables[id];
+		}
 		void AddVariable(Variable& var)
 		{
 			if (var.type_id == 0) throw std::runtime_error("Variable with name=" + var.name + " is invalid.");
 			if (variables_str.count(var.name)) throw std::runtime_error("Variable with name=" + var.name + " already exists.");
-			variables_str.emplace(var.name, std::move(var));
+			if (variables.count(var.variable_id)) throw std::runtime_error("Variable with id=" + std::to_string(var.variable_id) + " already exists.");
+			variables_str.emplace(var.name,var);
+			variables.emplace(var.variable_id, std::move(var));
 		}
-		VariableTable() = default;
-		
+		VariableTable() = default;	
 	};
 
 	struct FunctionsTable 
@@ -273,6 +284,7 @@ namespace Malachite
 		void PopSpace() { if (spaces.size() > 0) spaces.pop_back(); }
 		bool HasSpaces() { return spaces.size() > 0; }
 		size_t GetSpacesDepth() { return spaces.size(); }
+
 
 	};
 }

@@ -15,6 +15,9 @@ namespace Malachite
 		bool is_negative_value = false; // -10
 
 		///--------Methods
+
+		TokenValueType GetNumberValueType(const std::string& number);
+
 		char GetNearCharWithoutSpaces(const std::string& text, size_t start_index, int step = 1);
 
 		TokenType GetTokenType(const std::string& token);

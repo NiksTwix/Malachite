@@ -192,11 +192,16 @@ namespace Malachite
     {
         //Stack principe: lower value is left, higher is right
         Nop,
+
+        START_SECTION_MEMORY_OPS,
+
         Immediate,          // Push literal contant
         Push,               // Push to stack (for functions)
         Pop,
         Load,               //Load "variable"/pointer
         Store,              //Store "variable"/pointer
+        LoadRelatively,               //Load "variable"/pointer with offset in stack (if and cycles in functions)
+        StoreRelatively,              //Store "variable"/pointer with offset in stack (if and cycles in functions)
         LoadOffset,         //Load      "variable"-startpointer     "variable"/constant-offset     
         StoreOffset,        //Store    "variable"-startpointer     "variable"/constant-offset
 
@@ -204,12 +209,14 @@ namespace Malachite
         LoadDirect,         //Load from direct address in memory
         StoreDirect,        //Store in direct address in memory
         GetAddress,         //Returns address in heap or stack
+        END_SECTION_MEMORY_OPS,
 
+
+        //Debug
         ScopeStart,
         ScopeEnd,
-
         Label,      //label label_Type label_name
-
+        //Declaring
         DeclareVariable,    //Declaring of variable, parameters are name and vm_type (double/int64/uint64), but creating writting in variable table with fact type (string and another)
         DeclareFunction,    //Declaring of function, parameters are name and return type_id, code after DeclareFunction and ScopeStart is function body.
         //Arithmetic
@@ -477,6 +484,18 @@ namespace Malachite
         }
     };
 
-    
+    class PseudoFieldNames 
+    {
+    public:
+        const std::string variableID_name = "ID";
+        const std::string typeID_name = "Type";
+        const std::string functionID_name = "ID";
+        const std::string valueID_name = "Value";
+        static const PseudoFieldNames& Get() 
+        {
+            static PseudoFieldNames pfn;
+            return pfn;
+        }
+    };
     
 }

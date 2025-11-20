@@ -9,7 +9,7 @@ using namespace MalachiteCore;
 
 int main()
 {
-	//VMState state;
+	VMState state;
 
 
 	//test
@@ -31,8 +31,12 @@ int main()
 	//ыexecute(&state, commands.data(), 4);
 
 	std::string code = R"CODE(
-	float y = 100;
-	int x = -123 / (232 + 234 *34) + y;
+	{
+		int x = 239 *568 + 34
+		int y = 239 *568 + 34 - x
+	}
+	
+
 )CODE";
 
 	Malachite::Lexer lexer;
@@ -40,7 +44,7 @@ int main()
 	Malachite::ASTBuilder astbuilder;
 	auto tree = astbuilder.BuildAST(tokens);
 	Malachite::PseudoByteDecoder pbd;
-	auto r = pbd.GeneratePseudoCode(tree);
+	auto r = pbd.GeneratePseudoCode(tree.children);
 
 	for (auto& t : r.second) 
 	{

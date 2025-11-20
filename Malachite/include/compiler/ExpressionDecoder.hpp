@@ -38,6 +38,7 @@ namespace Malachite
 	{
 	private:
 
+
 		Type* FindType(std::shared_ptr<CompilationState> state, const std::string& type_name);
 		Variable* FindVariable(std::shared_ptr<CompilationState> state, const std::string& variable_name);
 		const std::vector<functionID>* FindFunctions(std::shared_ptr<CompilationState> state, const std::string& function_name);
@@ -56,9 +57,7 @@ namespace Malachite
 	public:
 		std::vector<TokensGroup>	ToPostfixForm(const std::vector<Token>& original);
 		std::vector<PseudoCommand>	PostfixToPseudo(const std::vector<TokensGroup>& postfix, std::shared_ptr<CompilationState> state);
-
-
 		std::vector<PseudoCommand>	DecodeExpression(const ASTNode& node, std::shared_ptr<CompilationState> state);
-		
+
 	};
 }

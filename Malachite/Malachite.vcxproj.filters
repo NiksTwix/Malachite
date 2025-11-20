@@ -66,11 +66,14 @@
     <ClInclude Include="include\compiler\CompilationState.hpp">
       <Filter>Файлы заголовков\compiler</Filter>
     </ClInclude>
-    <ClInclude Include="include\compiler\ArithmeticDecoder.hpp">
+    <ClInclude Include="include\compiler\ExpressionDecoder.hpp">
       <Filter>Файлы заголовков\compiler\decoding</Filter>
     </ClInclude>
     <ClInclude Include="include\compiler\PseudoByteDecoder.hpp">
       <Filter>Файлы заголовков\compiler\decoding</Filter>
+    </ClInclude>
+    <ClInclude Include="include\compiler\ByteDecoder.hpp">
+      <Filter>Файлы заголовков\compiler</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -92,7 +95,10 @@
     <ClCompile Include="source\compiler\PseudoByteDecoder.cpp">
       <Filter>Исходные файлы\compiler</Filter>
     </ClCompile>
-    <ClCompile Include="source\compiler\ArithmeticDecoder.cpp">
+    <ClCompile Include="source\compiler\ExpressionDecoder.cpp">
+      <Filter>Исходные файлы\compiler</Filter>
+    </ClCompile>
+    <ClCompile Include="source\compiler\ByteDecoder.cpp">
       <Filter>Исходные файлы\compiler</Filter>
     </ClCompile>
   </ItemGroup>

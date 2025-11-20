@@ -12,9 +12,11 @@ namespace MalachiteCore {
     constexpr size_t STACK_START = MAX_MEMORY_SIZE - 1;  // Top of memory
     constexpr size_t STACK_END = STACK_START - STACK_SIZE + 1;
 
-    static constexpr uint32_t ZERO_FLAG = 1 << 0;
-    static constexpr uint32_t JUMPED_FLAG = 1 << 1;
-    static constexpr uint32_t STOPPED_FLAG = 1 << 2;     //External flag
+    static constexpr uint32_t EQUAL_FLAG = 1 << 0;
+    static constexpr uint32_t GREATER_FLAG = 1 << 1;
+    static constexpr uint32_t LESS_FLAG = 1 << 2;
+    static constexpr uint32_t JUMPED_FLAG = 1 << 3;
+    static constexpr uint32_t STOPPED_FLAG = 1 << 4;     //External flag
 
     struct CallFrame {
         uint64_t return_ip;
@@ -48,16 +50,17 @@ namespace MalachiteCore {
     };
     struct VMCommand 
     {
-        OpCode operation;   //RR,RRR, RM and MR types
-        uint64_t destination;   //register or pointer
-        uint64_t source0;       //register or pointer
-        uint64_t source1;       //register or pointer
-        Register immediate;     //raw data
+        OpCode operation = OpCode::OP_NOP;   //RR,RRR, RM and MR types
+        uint64_t destination = 0;   //register or pointer
+        uint64_t source0 = 0;       //register or pointer
+        uint64_t source1 = 0;       //register or pointer
+        Register immediate{};     //raw data
 
         VMCommand(OpCode oper, uint64_t dest, uint64_t src0, uint64_t src1) : operation(oper), destination(dest), source0(src0), source1(src1) {}
         VMCommand(OpCode oper, uint64_t dest, uint64_t src0) : operation(oper), destination(dest), source0(src0) {}
         VMCommand(OpCode oper, uint64_t dest) : operation(oper), destination(dest){}
         VMCommand(OpCode oper, uint64_t dest, Register imm) : operation(oper), destination(dest), immediate(imm) {}
+        VMCommand(OpCode oper) : operation(oper) {}
     };
 
    

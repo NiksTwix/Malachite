@@ -27,6 +27,7 @@ namespace MalachiteCore
         OP_OR_RRR,
         OP_NOT_RR,
         OP_CMP_RR,
+        OP_DCMP_RR,     //For double with nan checking
         OP_BIT_OR_RRR,
         OP_BIT_NOT_RR,
         OP_BIT_AND_RRR,
@@ -49,16 +50,23 @@ namespace MalachiteCore
         OP_POP,                 // destination[register to], source0[offset from (not register)]
         OP_LOAD_LOCAL,          //destination[register]            source[memory-offset]          source1[size in bytes]  
         OP_STORE_LOCAL,         //destination[memory-offset]       source[register]               source1[size in bytes]  
-        OP_STORE_ENCLOSING,     //destination[memory-offset]       source0[register]              source1[size and depth] size - 32 little bits, depth - 32 big bits       we store variable to n frame below
-        OP_LOAD_ENCLOSING,      //destination[register]            source0[memory-offset]         source1[size and depth] size - 32 little bits, depth - 32 big bits       we load variable from n frame below
+        // A - absolute, r - relatively
+        OP_STORE_ENCLOSING_A,     //destination[memory-offset]       source0[register]              source1[size and depth] size - 32 little bits, depth - 32 big bits       we store variable to n frame at start
+        OP_LOAD_ENCLOSING_A,      //destination[register]            source0[memory-offset]         source1[size and depth] size - 32 little bits, depth - 32 big bits       we load variable from n frame at start
+        OP_STORE_ENCLOSING_R,     //destination[memory-offset]       source0[register]              source1[size and depth] size - 32 little bits, depth - 32 big bits       we store variable to n frame at start
+        OP_LOAD_ENCLOSING_R,      //destination[register]            source0[memory-offset]         source1[size and depth] size - 32 little bits, depth - 32 big bits       we load variable from n frame at start
 
         OP_ALLOCATE_MEMORY,
         OP_FREE_MEMORY,
 
         // Control flow [91-120]  
         OP_JMP = 91,
-        OP_JZ,
-        OP_JNZ,
+        OP_JE,      //Jump if equal flag is setted 
+        OP_JNE,     //Jump if equal flag isnt setted 
+        OP_JL,   //Jump if less flag is setted 
+        OP_JG,  //Jump if greater flag is setted 
+        OP_JEL,   //Jump if equal or less flags are setted 
+        OP_JEG,  //Jump if equal or greater flags are setted 
         OP_CALL,
         OP_RET,
         OP_HALT,

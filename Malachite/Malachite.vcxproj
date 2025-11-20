@@ -20,16 +20,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Malachite.cpp" />
-    <ClCompile Include="source\compiler\ArithmeticDecoder.cpp" />
+    <ClCompile Include="source\compiler\ExpressionDecoder.cpp" />
     <ClCompile Include="source\compiler\ASTBuilder.cpp" />
+    <ClCompile Include="source\compiler\ByteDecoder.cpp" />
     <ClCompile Include="source\compiler\Compiler.cpp" />
     <ClCompile Include="source\compiler\Lexer.cpp" />
     <ClCompile Include="source\compiler\PseudoByteDecoder.cpp" />
     <ClCompile Include="source\core\functions.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\compiler\ArithmeticDecoder.hpp" />
+    <ClInclude Include="include\compiler\ExpressionDecoder.hpp" />
     <ClInclude Include="include\compiler\ASTBuilder.hpp" />
+    <ClInclude Include="include\compiler\ByteDecoder.hpp" />
     <ClInclude Include="include\compiler\CompilationState.hpp" />
     <ClInclude Include="include\compiler\Compiler.hpp" />
     <ClInclude Include="include\compiler\Definitions.hpp" />

@@ -1,4 +1,4 @@
-﻿#include "..\..\include\compiler\ArithmeticDecoder.hpp"
+﻿#include "..\..\include\compiler\ExpressionDecoder.hpp"
 #include "..\..\include\compiler\StringOperations.hpp"
 
 
@@ -174,7 +174,7 @@ namespace Malachite
 			Logger::Get().PrintLogicError("Function's overloading with name \"" + func_name + "\" doesnt exist.", postfix[1].token.line);
 			return std::vector<PseudoCommand>();
 		}
-		result.push_back(PseudoCommand(PseudoOpCode::Call, { {"functionID", valid_functions[0]} }));
+		result.push_back(PseudoCommand(PseudoOpCode::Call, { {PseudoFieldNames::Get().functionID_name, valid_functions[0]} }));
 		return result;
 	}
 	std::vector<PseudoCommand> ExpressionDecoder::PTP_HandleExpression(const std::vector<TokensGroup>& postfix, std::shared_ptr<CompilationState> state)
@@ -195,7 +195,7 @@ namespace Malachite
 					//Add type converting later
 					if (auto* variable = FindVariable(state, t.value.strVal); variable)
 					{
-						result.push_back(PseudoCommand(PseudoOpCode::Load, { {"variableID", variable->variable_id} }));
+						result.push_back(PseudoCommand(PseudoOpCode::Load, { {PseudoFieldNames::Get().variableID_name, variable->variable_id} }));
 					}
 					else
 					{
@@ -204,7 +204,7 @@ namespace Malachite
 					}
 				}
 				if (t.type == TokenType::OPERATOR) result.push_back(PseudoCommand(SyntaxInfo::GetOperatorPseudoCode(t)));
-				if (t.type == TokenType::LITERAL) result.push_back(PseudoCommand(PseudoOpCode::Immediate, { {"value", t.value} }));
+				if (t.type == TokenType::LITERAL) result.push_back(PseudoCommand(PseudoOpCode::Immediate, { {PseudoFieldNames::Get().valueID_name, t.value } }));
 			}
 			else // Complex
 			{
@@ -316,13 +316,13 @@ namespace Malachite
 
 		// Генерируем команду объявления
 		PseudoCommand declare_cmd(PseudoOpCode::DeclareVariable);
-		declare_cmd.parameters["variableID"] = var.variable_id;
-		declare_cmd.parameters["type"] = type->type_id;
+		declare_cmd.parameters[PseudoFieldNames::Get().variableID_name] = var.variable_id;
+		declare_cmd.parameters[PseudoFieldNames::Get().typeID_name] = type->type_id;
 		result.push_back(declare_cmd);
 
 		// Генерируем команду сохранения (значение уже в стеке от правой части)
 		PseudoCommand store_cmd(PseudoOpCode::Store);		//или LOAD ARITHMETIC_OPER STORE 
-		store_cmd.parameters["variableID"] = var.variable_id;
+		store_cmd.parameters[PseudoFieldNames::Get().variableID_name] = var.variable_id;
 		result.push_back(store_cmd);
 
 		return result;
@@ -346,7 +346,7 @@ namespace Malachite
 		}
 
 		PseudoCommand store_cmd(PseudoOpCode::Store);
-		store_cmd.parameters["variableID"] = variable->variable_id;
+		store_cmd.parameters[PseudoFieldNames::Get().variableID_name] = variable->variable_id;
 		result.push_back(store_cmd);
 
 		return result;

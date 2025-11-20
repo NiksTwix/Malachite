@@ -14,7 +14,7 @@ namespace MalachiteCore
         
         //Arithmetic
         ZERO_DIVISION,
-
+        NAN_FLOAT_VALUE,
         //MEMORY
         MEMORY_ACCESS_VIOLATION,
         STACK_OVERFLOW,

@@ -197,7 +197,79 @@ namespace MalachiteCore
 			}
 			break;
 		}
-		case OpCode::OP_STORE_ENCLOSING:
+		case OpCode::OP_STORE_ENCLOSING_A:
+		{
+			// destination[memory-offset] source0[register] source1[depth]
+			uint64_t offset_val = command->destination;    // смещение в целевом фрейме
+			uint64_t src_reg = command->source0;           // регистр-источник данных  
+			uint64_t size_and_depth = command->source1;             // размер переменной и глубина (сколько фреймов от начала)
+
+			uint64_t size = size_and_depth >> 32;
+			uint64_t depth = size_and_depth & 0xFFFFFFFF;  //0b0000000000000000000000000000000011111111111111111111111111111111;
+			// Находим нужный фрейм через data_stack
+			if (depth >= state->data_stack.size()) {
+				return VMError::STACK_UNDERFLOW;
+			}
+
+			const DataFrame& target_frame = state->data_stack.at(depth);
+			uint64_t target_fp = target_frame.fp;
+
+			// Проверяем границы стека для целевого фрейма
+			if (offset_val > target_fp || target_fp - offset_val < STACK_END) {
+				return VMError::MEMORY_ACCESS_VIOLATION;
+			}
+
+			uint64_t address = target_fp - offset_val;
+
+			if (address < STACK_END || address + size >= STACK_START) {
+				return VMError::MEMORY_ACCESS_VIOLATION;
+			}
+
+			// Записываем данные из регистра-источника
+			uint64_t value = state->registers[src_reg].u;
+			for (int i = 0; i < size; i++) {
+				uint8_t byte = (value >> (i * 8)) & 0xFF;
+				state->memory[address + i] = byte;
+			}
+			break;
+		}
+
+		case OpCode::OP_LOAD_ENCLOSING_A:
+		{
+			// destination[register] source0[memory-offset] source1[depth]
+			uint64_t dest_reg = command->destination;      // регистр-назначение
+			uint64_t offset_val = command->source0;        // смещение в целевом фрейме
+			uint64_t size_and_depth = command->source1;             // размер переменной и глубина (сколько фреймов от начала)
+
+			uint64_t size = size_and_depth >> 32;
+			uint64_t depth = size_and_depth & 0xFFFFFFFF;  //0b0000000000000000000000000000000011111111111111111111111111111111;
+			if (depth >= state->data_stack.size()) {
+				return VMError::STACK_UNDERFLOW;
+			}
+
+			const DataFrame& target_frame = state->data_stack.at(depth);
+			uint64_t target_fp = target_frame.fp;
+
+			if (offset_val > target_fp || target_fp - offset_val < STACK_END) {
+				return VMError::MEMORY_ACCESS_VIOLATION;
+			}
+
+			uint64_t address = target_fp - offset_val;
+
+			if (address < STACK_END || address + size >= STACK_START) {
+				return VMError::MEMORY_ACCESS_VIOLATION;
+			}
+
+			// Читаем данные в регистр-назначение
+			uint64_t value = 0;
+			for (int i = 0; i < size; i++) {
+				uint8_t byte = state->memory[address + i];
+				value |= static_cast<uint64_t>(byte) << (i * 8);
+			}
+			state->registers[dest_reg].u = value;
+			break;
+		}
+		case OpCode::OP_STORE_ENCLOSING_R:
 		{
 			// destination[memory-offset] source0[register] source1[depth]
 			uint64_t offset_val = command->destination;    // смещение в целевом фрейме
@@ -234,7 +306,7 @@ namespace MalachiteCore
 			break;
 		}
 
-		case OpCode::OP_LOAD_ENCLOSING:
+		case OpCode::OP_LOAD_ENCLOSING_R:
 		{
 			// destination[register] source0[memory-offset] source1[depth]
 			uint64_t dest_reg = command->destination;      // регистр-назначение
@@ -309,14 +381,46 @@ namespace MalachiteCore
 			break;
 		}
 		case OpCode::OP_CMP_RR:
+			//Reset logic flags state
+			state->flags &= ~(EQUAL_FLAG | LESS_FLAG | GREATER_FLAG);
+
 			if (state->registers[command->source0].i == state->registers[command->source1].i) {
-				state->flags |= ZERO_FLAG;
+				state->flags |= EQUAL_FLAG;
 			}
-			else {
-				state->flags &= ~ZERO_FLAG;
+			else if (state->registers[command->source0].i > state->registers[command->source1].i)
+			{
+				state->flags |= GREATER_FLAG;
+			}
+			else // < CASE
+			{
+				state->flags |= LESS_FLAG;
 			}
 			break;
-		default:
+		case OpCode::OP_DCMP_RR:
+			//Reset logic flags state
+			state->flags &= ~(EQUAL_FLAG | LESS_FLAG | GREATER_FLAG);
+
+			auto is_nan = [](double value) -> bool {
+				uint64_t bits = *reinterpret_cast<const uint64_t*>(&value);
+				uint64_t exponent = (bits >> 52) & 0x7FF;  // 11 bits for exponent
+				uint64_t mantissa = bits & 0xFFFFFFFFFFFFF; // 52 bits for mantissa
+				return (exponent == 0x7FF) && (mantissa != 0);
+				};
+			if (is_nan(state->registers[command->source0].d) || is_nan(state->registers[command->source1].d)) {
+				// NaN detected - don't set comparison flags
+				return VMError::NAN_FLOAT_VALUE;
+			}
+			if (state->registers[command->source0].d == state->registers[command->source1].d) {
+				state->flags |= EQUAL_FLAG;
+			}
+			else if (state->registers[command->source0].d > state->registers[command->source1].d)
+			{
+				state->flags |= GREATER_FLAG;
+			}
+			else // < CASE
+			{
+				state->flags |= LESS_FLAG;
+			}
 			break;
 		}
 		return VMError::NO_ERROR;
@@ -331,20 +435,45 @@ namespace MalachiteCore
 			state->flags |= JUMPED_FLAG;
 			break;
 
-		case OpCode::OP_JZ:
-			if (state->flags & ZERO_FLAG) {
+		case OpCode::OP_JE:
+			if (state->flags & EQUAL_FLAG) {
 				state->ip = command->destination;
 				state->flags |= JUMPED_FLAG;
 			}
 			break;
 
-		case OpCode::OP_JNZ:
-			if (!(state->flags & ZERO_FLAG)) {  
+		case OpCode::OP_JNE:
+			if (!(state->flags & EQUAL_FLAG)) {  
+				state->ip = command->destination;
+				state->flags |= JUMPED_FLAG;
+			}
+			break;
+		case OpCode::OP_JL:
+			if (state->flags & LESS_FLAG) {
 				state->ip = command->destination;
 				state->flags |= JUMPED_FLAG;
 			}
 			break;
 
+		case OpCode::OP_JG:
+			if (state->flags & GREATER_FLAG) {
+				state->ip = command->destination;
+				state->flags |= JUMPED_FLAG;
+			}
+			break;
+		case OpCode::OP_JEL:
+			if (state->flags & LESS_FLAG || state->flags & EQUAL_FLAG) {
+				state->ip = command->destination;
+				state->flags |= JUMPED_FLAG;
+			}
+			break;
+
+		case OpCode::OP_JEG:
+			if (state->flags & GREATER_FLAG || state->flags & EQUAL_FLAG) {
+				state->ip = command->destination;
+				state->flags |= JUMPED_FLAG;
+			}
+			break;
 		case OpCode::OP_CALL:
 			// Используем только call_stack для управления вызовами
 			if (state->call_stack.size() >= CALL_STACK_SIZE) {

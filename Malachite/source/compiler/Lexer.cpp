@@ -1,9 +1,41 @@
 #include "..\..\include\compiler\Lexer.hpp"
 #include "..\..\include\compiler\Logger.hpp"
-
+#include <limits>
 
 namespace Malachite
 {
+	TokenValueType Lexer::GetNumberValueType(const std::string& number)
+	{
+		//StringsOperations::IsNumber has been just called early
+		bool has_point = number.find('.') != std::string::npos;
+
+		if (has_point) return TokenValueType::FLOAT;
+
+		try {
+			if (is_negative_value) {
+				// Отрицательное число - всегда INT
+				return TokenValueType::INT;
+			}
+			else {
+				// Положительное число - проверяем диапазон
+				uint64_t value = std::stoull(number);
+
+				// Если число влезает в int64_t - делаем INT, иначе UINT
+				if (value <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+					return TokenValueType::INT;
+				}
+				else {
+					return TokenValueType::UINT;
+				}
+			}
+		}
+		catch (const std::out_of_range&) {
+			// Если число слишком большое даже для uint64_t
+			Logger::Get().PrintTypeError("Number value is greater(less) than max(min) permitted.", current_line);
+			return TokenValueType::VOID; 
+		}
+		return TokenValueType::UINT;
+	}
 	char Lexer::GetNearCharWithoutSpaces(const std::string& text, size_t start_index, int step)
 
 	{
@@ -38,10 +70,28 @@ namespace Malachite
 
 		if (StringOperations::IsNumber(token))	//TODO type management
 		{
-			if (is_negative_value)
+			auto value_type = GetNumberValueType(token);
+			bool inv_copy = is_negative_value;
+			is_negative_value = false;
+			switch (value_type)
 			{
-				is_negative_value = false;
-				return -std::stod(token);
+			case Malachite::TokenValueType::VOID:
+				return 1.0;		//safe for all operations
+			case Malachite::TokenValueType::INT:
+				if (inv_copy) return -std::stoll(token);
+				return std::stoll(token);
+			case Malachite::TokenValueType::UINT:
+				if (inv_copy) {
+					// Отрицательное UINT? Это ошибка
+					Logger::Get().PrintTypeError("Unsigned integer cannot be negative.", current_line);
+					return 1.0; 
+				}
+				return std::stoull(token);
+			case Malachite::TokenValueType::FLOAT:
+				if (inv_copy) return -std::stod(token);
+				return std::stod(token);
+			default:
+				break;
 			}
 			return std::stod(token);
 		}
