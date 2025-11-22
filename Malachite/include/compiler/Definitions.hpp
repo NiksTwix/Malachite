@@ -220,15 +220,17 @@ namespace Malachite
         START_SECTION_DECLARING_OPS,
         DeclareVariable,    //Declaring of variable, parameters are name and vm_type (double/int64/uint64), but creating writting in variable table with fact type (string and another)
         DeclareFunction,    //Declaring of function, parameters are name and return type_id, code after DeclareFunction and ScopeStart is function body.
+        DeclareFunctionEnd,
         END_SECTION_DECLARING_OPS,
         //Arithmetic
+        START_SECTION_ARITHMETIC_OPS,
         Add,
         Subtract,
         Multiplication,
         Division,
         Mod,
         Negative,
-
+        END_SECTION_ARITHMETIC_OPS,
         // Logic
         And,
         Or,

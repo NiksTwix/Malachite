@@ -7,6 +7,8 @@ namespace MalachiteCore
     constexpr uint8_t REGISTER_SIZE = sizeof(uint64_t);
     constexpr size_t CALL_STACK_SIZE = 256;
 
+    using Pointer = uint64_t;   //For external using, in vm used uint64_t
+
     constexpr size_t MAX_MEMORY_SIZE = 65536; //64KB
     constexpr size_t STACK_SIZE = MAX_MEMORY_SIZE * 4 / 8;  // 32KB  
     constexpr size_t HEAP_SIZE = MAX_MEMORY_SIZE * 4 / 8;   // 32KB

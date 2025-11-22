@@ -14,6 +14,7 @@ namespace Malachite
 			value_stack.pop();
 		}
 	}
+
 	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
@@ -35,27 +36,27 @@ namespace Malachite
 				return result;
 			case Malachite::TokenValueType::INT:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_INT, free_register, MalachiteCore::Register(val.intVal)));
-				value_stack.push(ValueFrame(val, free_register));
+				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::INT));
 				return result;
 			case Malachite::TokenValueType::UINT:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_UINT, free_register, MalachiteCore::Register(val.uintVal)));
-				value_stack.push(ValueFrame(val, free_register));
+				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::UINT));
 				return result;
 			
 			case Malachite::TokenValueType::FLOAT:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_DOUBLE, free_register, MalachiteCore::Register(val.floatVal)));
-				value_stack.push(ValueFrame(val, free_register));
+				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::DOUBLE));
 				return result;
 			case Malachite::TokenValueType::STRING:
 				Logger::Get().PrintTypeError("Attemp of direct immediating string value. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
 				return result;
 			case Malachite::TokenValueType::CHAR:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_INT, free_register, MalachiteCore::Register((int64_t)val.charVal)));
-				value_stack.push(ValueFrame(val, free_register));
+				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::INT));
 				return result;
 			case Malachite::TokenValueType::BOOL:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_UINT, free_register, MalachiteCore::Register((uint64_t)val.boolVal)));
-				value_stack.push(ValueFrame(val, free_register));
+				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::UINT));
 				return result;
 			}
 			break;
@@ -73,6 +74,7 @@ namespace Malachite
 			if (free_register == InvalidRegister) 
 			{
 				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
+				break;
 			}
 			size_t size = type.size;
 			if (type.category == Type::Category::PRIMITIVE) 
@@ -81,15 +83,20 @@ namespace Malachite
 				if (info.depth == current_depth)
 				{
 					result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_LOAD_LOCAL, free_register, info.stack_offset, type.size));
-					value_stack.push(ValueFrame(var.variable_id, free_register));
+
 				}
 				else //
 				{
 					uint64_t size_and_depth = size << 32;	//0...size -> size...0
 					size_and_depth |= info.depth;	//uint64_t and int64_t size...0 -> size...depth
 					result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_LOAD_ENCLOSING_A, free_register, info.stack_offset, size_and_depth));
-					value_stack.push(ValueFrame(var.variable_id, free_register));
 				}
+				if (type.vm_analog == Type::VMAnalog::NONE) 
+				{
+					Logger::Get().PrintLogicError("Primitive type \""+type.name + "\" hasnt analog in the Malachite Virtual Machine.Instruction pointer of pseudo code : " + std::to_string(ip), ip);
+					break;
+				}
+				value_stack.push(ValueFrame(var.variable_id, free_register,type.vm_analog));
 				return result;
 			}
 			else if (type.category == Type::Category::ALIAS)
@@ -186,7 +193,12 @@ namespace Malachite
 			VariableInfo vi;
 			vi.depth = current_depth;
 			vi.stack_offset = frame_size_stack.top();
-			frame_size_stack.top() += type.size;
+			if (type.category == Type::Category::PRIMITIVE) frame_size_stack.top() += type.size;
+			if (type.category == Type::Category::CLASS) frame_size_stack.top() += sizeof(MalachiteCore::Pointer);
+			//if (type.category == Type::Category::ALIAS) frame_size_stack.top();
+			//{
+			//	//letter. Alias its common pseudoname of some type, if parent type is primitive -> push type.size, if class -> push pointer size
+			//}
 			//We need to push stack pointer
 			result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_PUSH,type.size,0));	//Take trash from zero register for pulling variable's space 
 			break;
@@ -202,6 +214,102 @@ namespace Malachite
 		}
 		return result;
 		}
+	}
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
+	{
+		std::vector<MalachiteCore::VMCommand> result;
+		PseudoCommand cmd = cmds[ip];
+		switch (cmd.op_code)
+		{
+			case PseudoOpCode::Add:
+			{
+				//Use secondly register of the one operand
+				ValueFrame& vf_left = value_stack.top(); value_stack.pop();
+				ValueFrame& vf_right = value_stack.top(); value_stack.pop();
+				if (vf_right.value_type != vf_left.value_type)
+				{
+					result.push_back(MalachiteCore::VMCommand(GetVMTypeConvertionCommand(vf_left.value_type, vf_right.value_type), vf_left.used_register));
+				}
+				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Add, vf_right.value_type), vf_right.used_register, vf_right.used_register, vf_left.used_register));
+				regsTable.Acquire(vf_left.used_register);
+				break;
+			}	
+			case PseudoOpCode::Subtract:
+			{
+				//Use secondly register of the one operand
+				ValueFrame& vf_left = value_stack.top(); value_stack.pop();
+				ValueFrame& vf_right = value_stack.top(); value_stack.pop();
+				if (vf_right.value_type != vf_left.value_type)
+				{
+					result.push_back(MalachiteCore::VMCommand(GetVMTypeConvertionCommand(vf_left.value_type, vf_right.value_type), vf_left.used_register));
+				}
+				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Subtract, vf_right.value_type), vf_right.used_register, vf_right.used_register, vf_left.used_register));
+				regsTable.Acquire(vf_left.used_register);
+				break;
+			}	
+			case PseudoOpCode::Multiplication:
+			{
+				//Use secondly register of the one operand
+				ValueFrame& vf_left = value_stack.top(); value_stack.pop();
+				ValueFrame& vf_right = value_stack.top(); value_stack.pop();
+				if (vf_right.value_type != vf_left.value_type)
+				{
+					result.push_back(MalachiteCore::VMCommand(GetVMTypeConvertionCommand(vf_left.value_type, vf_right.value_type), vf_left.used_register));
+				}
+				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Multiplication, vf_right.value_type), vf_right.used_register, vf_right.used_register, vf_left.used_register));
+				regsTable.Acquire(vf_left.used_register);
+				break;
+			}
+			case PseudoOpCode::Division:
+			{
+				//Use secondly register of the one operand
+				ValueFrame& vf_left = value_stack.top(); value_stack.pop();
+				ValueFrame& vf_right = value_stack.top(); value_stack.pop();
+				if (vf_right.value_type != vf_left.value_type)
+				{
+					result.push_back(MalachiteCore::VMCommand(GetVMTypeConvertionCommand(vf_left.value_type, vf_right.value_type), vf_left.used_register));
+				}
+				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Division, vf_right.value_type), vf_right.used_register, vf_right.used_register, vf_left.used_register));
+				regsTable.Acquire(vf_left.used_register);
+				break;
+			}
+			case PseudoOpCode::Mod:
+			{
+				ValueFrame vf_right = value_stack.top(); value_stack.pop();
+				ValueFrame vf_left = value_stack.top(); value_stack.pop();
+
+				// Mod только для целых типов
+				if (vf_left.value_type != Type::VMAnalog::INT && vf_left.value_type != Type::VMAnalog::UINT) {
+					Logger::Get().PrintTypeError("Mod operation requires integer types", ip);
+					break;
+				}
+				if (vf_right.value_type != vf_left.value_type) {
+					result.push_back(MalachiteCore::VMCommand(GetVMTypeConvertionCommand(vf_left.value_type, vf_right.value_type),
+						vf_left.used_register));
+				}
+				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Mod, vf_right.value_type),
+					vf_right.used_register, vf_right.used_register, vf_left.used_register));
+				regsTable.Acquire(vf_left.used_register);
+				break;
+			}
+
+			case PseudoOpCode::Negative:
+			{
+				ValueFrame vf_left = value_stack.top(); value_stack.pop();
+
+				// Negative только для знаковых типов (INT, DOUBLE)
+				if (vf_left.value_type != Type::VMAnalog::INT && vf_left.value_type != Type::VMAnalog::DOUBLE) {
+					Logger::Get().PrintTypeError("Negative operation requires signed types (int, double)", ip);
+					break;
+				}
+
+				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Negative, vf_left.value_type),
+					vf_left.used_register, vf_left.used_register));
+				value_stack.push(ValueFrame(vf_left.used_register, vf_left.value_type));
+				break;
+			}
+		}
+		return result;
 	}
 	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
 	{
@@ -236,6 +344,73 @@ namespace Malachite
 		}
 
 		return result;
+	}
+
+	MalachiteCore::OpCode ByteDecoder::GetVMTypeConvertionCommand(Type::VMAnalog first, Type::VMAnalog second)
+	{
+		if (first == second) return MalachiteCore::OP_NOP;	//If types are equal
+		if (first == Type::VMAnalog::INT && second == Type::VMAnalog::UINT) return MalachiteCore::OP_TC_ITUI_R;
+		if (first == Type::VMAnalog::INT && second == Type::VMAnalog::DOUBLE) return MalachiteCore::OP_TC_ITD_R;
+		if (first == Type::VMAnalog::DOUBLE && second == Type::VMAnalog::INT) return MalachiteCore::OP_TC_DTI_R;
+		if (first == Type::VMAnalog::DOUBLE && second == Type::VMAnalog::UINT) return MalachiteCore::OP_TC_DTUI_R;
+		if (first == Type::VMAnalog::UINT && second == Type::VMAnalog::INT) return MalachiteCore::OP_TC_UITI_R;
+		if (first == Type::VMAnalog::UINT && second == Type::VMAnalog::DOUBLE) return MalachiteCore::OP_TC_UITD_R;
+		return MalachiteCore::OP_NOP;
+	}
+
+	MalachiteCore::OpCode ByteDecoder::GetVMTypedArithmeticCommand(PseudoOpCode code, Type::VMAnalog type)
+	{
+		if (type == Type::VMAnalog::INT) 
+		{
+			switch (code)
+			{
+			case Malachite::PseudoOpCode::Add:
+				return MalachiteCore::OP_IADD_RRR;
+			case Malachite::PseudoOpCode::Subtract:
+				return MalachiteCore::OP_ISUB_RRR;
+			case Malachite::PseudoOpCode::Multiplication:
+				return MalachiteCore::OP_IMUL_RRR;
+			case Malachite::PseudoOpCode::Division:
+				return MalachiteCore::OP_IDIV_RRR;
+			case Malachite::PseudoOpCode::Mod:
+				return MalachiteCore::OP_IMOD_RRR;
+			case Malachite::PseudoOpCode::Negative:
+				return MalachiteCore::OP_INEG_RR;
+			}
+		}
+		if (type == Type::VMAnalog::UINT)
+		{
+			switch (code)
+			{
+			case Malachite::PseudoOpCode::Add:
+				return MalachiteCore::OP_UADD_RRR;
+			case Malachite::PseudoOpCode::Subtract:
+				return MalachiteCore::OP_USUB_RRR;
+			case Malachite::PseudoOpCode::Multiplication:
+				return MalachiteCore::OP_UMUL_RRR;
+			case Malachite::PseudoOpCode::Division:
+				return MalachiteCore::OP_UDIV_RRR;
+			case Malachite::PseudoOpCode::Mod:
+				return MalachiteCore::OP_UMOD_RRR;
+			}
+		}
+		if (type == Type::VMAnalog::DOUBLE)
+		{
+			switch (code)
+			{
+			case Malachite::PseudoOpCode::Add:
+				return MalachiteCore::OP_DADD_RRR;
+			case Malachite::PseudoOpCode::Subtract:
+				return MalachiteCore::OP_DSUB_RRR;
+			case Malachite::PseudoOpCode::Multiplication:
+				return MalachiteCore::OP_DMUL_RRR;
+			case Malachite::PseudoOpCode::Division:
+				return MalachiteCore::OP_DDIV_RRR;
+			case Malachite::PseudoOpCode::Negative:
+				return MalachiteCore::OP_DNEG_RR;
+			}
+		}
+		return MalachiteCore::OpCode::OP_NOP;
 	}
 
 	std::vector<MalachiteCore::VMCommand> Malachite::ByteDecoder::PseudoToByte(std::pair<std::shared_ptr<CompilationState>, std::vector<PseudoCommand>> state)

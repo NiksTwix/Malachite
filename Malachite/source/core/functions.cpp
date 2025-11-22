@@ -107,9 +107,22 @@ namespace MalachiteCore
 			state->registers[command->destination].d = static_cast<double>(state->registers[command->destination].i);
 			break;
 		case OpCode::OP_TC_DTI_R:
-			state->registers[command->destination].i = static_cast<uint64_t>(state->registers[command->destination].d);
+			state->registers[command->destination].i = static_cast<int64_t>(state->registers[command->destination].d);
+			break;
+		case OpCode::OP_TC_UITD_R:
+			state->registers[command->destination].d = static_cast<double>(state->registers[command->destination].u);
+			break;
+		case OpCode::OP_TC_UITI_R:
+			state->registers[command->destination].i = static_cast<int64_t>(state->registers[command->destination].u);
+			break;
+		case OpCode::OP_TC_DTUI_R:
+			state->registers[command->destination].u = static_cast<uint64_t>(state->registers[command->destination].d);
+			break;
+		case OpCode::OP_TC_ITUI_R:
+			state->registers[command->destination].u = static_cast<uint64_t>(state->registers[command->destination].i);
 			break;
 		}
+
 		return VMError::NO_ERROR;
 	}
 }

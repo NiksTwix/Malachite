@@ -125,10 +125,13 @@ namespace Malachite
 		static typeID GetGlobalID() { static typeID global_id = 1; return global_id++; }		//0 is basic for int and double
 	public:
 		enum class Category {PRIMITIVE,ALIAS,CLASS};
+		enum class VMAnalog {UINT,INT,DOUBLE,NONE};		//NONE - error type
 		Category category{};
 		typeID type_id{};
 		typeID parent_type_id{};
 		std::string name = "type";
+
+		VMAnalog vm_analog = VMAnalog::UINT;
 
 		FunctionsTable methods_table{};
 		VariableTable fields_table{};
@@ -233,18 +236,23 @@ namespace Malachite
 			spaces.push_back(vs);
 			Type void_type(Type::Category::PRIMITIVE, "void");
 			void_type.size = 1;
+			void_type.vm_analog = Type::VMAnalog::NONE;
 			AddTypeToSpace(1, void_type);
 			Type int_type(Type::Category::PRIMITIVE, "int");
 			int_type.size = 8;
+			int_type.vm_analog = Type::VMAnalog::INT;
 			AddTypeToSpace(1, int_type);
 			Type float_type(Type::Category::PRIMITIVE, "float");
 			float_type.size = 8;
+			float_type.vm_analog = Type::VMAnalog::DOUBLE;
 			AddTypeToSpace(1, float_type);
 			Type bool_type(Type::Category::PRIMITIVE, "bool");
 			bool_type.size = 1;
+			bool_type.vm_analog = Type::VMAnalog::INT;
 			AddTypeToSpace(1, bool_type);
 			Type char_type(Type::Category::PRIMITIVE, "char");
 			char_type.size = 1;
+			char_type.vm_analog = Type::VMAnalog::INT;
 			AddTypeToSpace(1, char_type);
 		}
 

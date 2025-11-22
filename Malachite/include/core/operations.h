@@ -14,6 +14,11 @@ namespace MalachiteCore
         OP_IMUL_RRR,
         OP_IDIV_RRR,
         OP_IMOD_RRR,
+        OP_UADD_RRR,
+        OP_USUB_RRR,
+        OP_UMUL_RRR,
+        OP_UDIV_RRR,
+        OP_UMOD_RRR,
         OP_INEG_RR,
         OP_DADD_RRR,
         OP_DSUB_RRR,
@@ -74,9 +79,14 @@ namespace MalachiteCore
 
         // System Calls [121]
         OP_SYSTEM_CALL = 121,   //destination[SysCall], source0[param0], source1[param1]
-        // Other: Types Convertion [122-123]
+        // Other: Types Convertion [122-127]
         OP_TC_ITD_R,    //Type Convertion Integer To Double
         OP_TC_DTI_R,    //Type Convertion Double To Integer
+
+        OP_TC_UITD_R,    //Type Convertion Unsigned Integer To Double
+        OP_TC_UITI_R,    //Type Convertion Unsigned Integer To Integer
+        OP_TC_DTUI_R,    //Type Convertion Double To Unsigned Integer
+        OP_TC_ITUI_R,    //Type Convertion Integer To Unsigned Integer
     };
 
     enum SysCall 

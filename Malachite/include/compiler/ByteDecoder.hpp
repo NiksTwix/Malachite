@@ -9,6 +9,8 @@ namespace Malachite
 {
 	constexpr size_t InvalidRegister = SIZE_MAX;
     constexpr int64_t StartDepth = -1;
+
+
 	struct RegistersTable 
 	{
     private:
@@ -64,29 +66,32 @@ namespace Malachite
 
     struct ValueFrame 
     {
-        enum ValueType {IMMEDIATE,VARIABLE,OPERATION_RESULT};
-
+        enum ValueSourceType {IMMEDIATE,VARIABLE,OPERATION_RESULT};
+        enum ValueType { UINT, INT, DOUBLE};    //FLOAT(malachite syntax) = DOUBLE(c++)
         uint64_t used_register = InvalidRegister;
         TokenValue immediate_value = TokenValue((uint64_t)0);
         variableID variable_id = InvalidRegister;
-        ValueType value_type = ValueType::IMMEDIATE;
-
-        ValueFrame(variableID var, uint64_t ur) 
+        ValueSourceType value_source_type = ValueSourceType::IMMEDIATE;
+        Type::VMAnalog value_type = Type::VMAnalog::UINT;
+        ValueFrame(variableID var, uint64_t ur, Type::VMAnalog type = Type::VMAnalog::UINT)
         {
             variable_id = var;
-            value_type = ValueType::VARIABLE;
+            value_source_type = ValueSourceType::VARIABLE;
             used_register = ur;
+            value_type = type;
         }
-        ValueFrame(TokenValue vaL, uint64_t ur)
+        ValueFrame(TokenValue vaL, uint64_t ur, Type::VMAnalog type = Type::VMAnalog::UINT)
         {
             immediate_value = vaL;
-            value_type = ValueType::IMMEDIATE;
+            value_source_type = ValueSourceType::IMMEDIATE;
             used_register = ur;
+            value_type = type;
         }
-        ValueFrame(uint64_t ur)
+        ValueFrame(uint64_t ur, Type::VMAnalog type = Type::VMAnalog::UINT)
         {
-            value_type = ValueType::OPERATION_RESULT;
+            value_source_type = ValueSourceType::OPERATION_RESULT;
             used_register = ur;
+            value_type = type;
         }
     };
 
@@ -109,12 +114,14 @@ namespace Malachite
 
         std::unordered_map<variableID, VariableInfo> variable_depth; //variableID and info about variable. If we meet DECLARE_VARIABLE -> add writting <ID, Info>
 
-
         //Methods---------------------
         std::vector<MalachiteCore::VMCommand> HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
         std::vector<MalachiteCore::VMCommand> HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
-
+        std::vector<MalachiteCore::VMCommand> HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
         std::vector<MalachiteCore::VMCommand> HandleCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
+
+        MalachiteCore::OpCode GetVMTypeConvertionCommand(Type::VMAnalog first, Type::VMAnalog second);  //First to second
+        MalachiteCore::OpCode GetVMTypedArithmeticCommand(PseudoOpCode code, Type::VMAnalog type); 
 
         void ClearState();
 

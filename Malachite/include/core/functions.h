@@ -40,6 +40,22 @@ namespace MalachiteCore
 		case OP_INEG_RR:
 			state->registers[command->destination].i = -state->registers[command->source0].i;
 			break;
+		case OP_UADD_RRR:
+			state->registers[command->destination].u = state->registers[command->source0].u + state->registers[command->source1].u;
+			break;
+		case OP_USUB_RRR:
+			state->registers[command->destination].u = state->registers[command->source0].u - state->registers[command->source1].u;
+			break;
+		case OP_UMUL_RRR:
+			state->registers[command->destination].u = state->registers[command->source0].u * state->registers[command->source1].u;
+			break;
+		case OP_UDIV_RRR:
+			if (state->registers[command->source1].u == 0) return VMError::ZERO_DIVISION;
+			state->registers[command->destination].u = state->registers[command->source0].u / state->registers[command->source1].u;
+			break;
+		case OP_UMOD_RRR:
+			state->registers[command->destination].u = state->registers[command->source0].u % state->registers[command->source1].u;
+			break;
 		case OP_DADD_RRR:
 			state->registers[command->destination].d = state->registers[command->source0].d + state->registers[command->source1].d;
 			break;
