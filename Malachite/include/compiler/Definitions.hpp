@@ -217,8 +217,10 @@ namespace Malachite
         ScopeEnd,
         Label,      //label label_Type label_name
         //Declaring
+        START_SECTION_DECLARING_OPS,
         DeclareVariable,    //Declaring of variable, parameters are name and vm_type (double/int64/uint64), but creating writting in variable table with fact type (string and another)
         DeclareFunction,    //Declaring of function, parameters are name and return type_id, code after DeclareFunction and ScopeStart is function body.
+        END_SECTION_DECLARING_OPS,
         //Arithmetic
         Add,
         Subtract,

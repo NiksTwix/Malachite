@@ -46,15 +46,15 @@ namespace MalachiteCore
         OP_MOV_RI_DOUBLE,       //Double
         OP_CREATE_FRAME,
         OP_DESTROY_FRAME,
-        OP_PUSH,                // destination[offset to (not register)], source0[register from]
-        OP_POP,                 // destination[register to], source0[offset from (not register)]
+        OP_PUSH,                // destination[size (not register)], source0[register from]
+        OP_POP,                 // destination[register to], source0[size (not register)]
         OP_LOAD_LOCAL,          //destination[register]            source[memory-offset]          source1[size in bytes]  
         OP_STORE_LOCAL,         //destination[memory-offset]       source[register]               source1[size in bytes]  
         // A - absolute, r - relatively
         OP_STORE_ENCLOSING_A,     //destination[memory-offset]       source0[register]              source1[size and depth] size - 32 little bits, depth - 32 big bits       we store variable to n frame at start
         OP_LOAD_ENCLOSING_A,      //destination[register]            source0[memory-offset]         source1[size and depth] size - 32 little bits, depth - 32 big bits       we load variable from n frame at start
-        OP_STORE_ENCLOSING_R,     //destination[memory-offset]       source0[register]              source1[size and depth] size - 32 little bits, depth - 32 big bits       we store variable to n frame at start
-        OP_LOAD_ENCLOSING_R,      //destination[register]            source0[memory-offset]         source1[size and depth] size - 32 little bits, depth - 32 big bits       we load variable from n frame at start
+        OP_STORE_ENCLOSING_R,     //destination[memory-offset]       source0[register]              source1[size and depth] size - 32 little bits, depth - 32 big bits       we store variable to n frame from top
+        OP_LOAD_ENCLOSING_R,      //destination[register]            source0[memory-offset]         source1[size and depth] size - 32 little bits, depth - 32 big bits       we load variable from n frame  from top
 
         OP_ALLOCATE_MEMORY,
         OP_FREE_MEMORY,

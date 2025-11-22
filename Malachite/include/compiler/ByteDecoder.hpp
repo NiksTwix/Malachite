@@ -8,7 +8,7 @@
 namespace Malachite 
 {
 	constexpr size_t InvalidRegister = SIZE_MAX;
-    constexpr int StartDepth = -1;
+    constexpr int64_t StartDepth = -1;
 	struct RegistersTable 
 	{
     private:
@@ -64,7 +64,7 @@ namespace Malachite
 
     struct ValueFrame 
     {
-        enum ValueType {IMMEDIATE,VARIABLE};
+        enum ValueType {IMMEDIATE,VARIABLE,OPERATION_RESULT};
 
         uint64_t used_register = InvalidRegister;
         TokenValue immediate_value = TokenValue((uint64_t)0);
@@ -83,11 +83,16 @@ namespace Malachite
             value_type = ValueType::IMMEDIATE;
             used_register = ur;
         }
+        ValueFrame(uint64_t ur)
+        {
+            value_type = ValueType::OPERATION_RESULT;
+            used_register = ur;
+        }
     };
 
     struct VariableInfo 
     {
-        int depth = -1;
+        int depth = StartDepth;
         uint64_t stack_offset = 0;  
     }; 
 
@@ -97,7 +102,7 @@ namespace Malachite
         //global_state
         RegistersTable regsTable;
         std::shared_ptr<CompilationState> current_state;
-        int64_t current_depth = -1; //Program starts by ScopeStart and ends by ScopeEnd, but we need start depth = 0
+        int64_t current_depth = StartDepth; //Program starts by ScopeStart and ends by ScopeEnd, but we need start depth = 0
         uint64_t ip = 0;
         std::stack<ValueFrame> value_stack;         //Stack for operations
         std::stack<uint64_t> frame_size_stack;    //When we create variable add it size to frame_size stack;
@@ -106,7 +111,11 @@ namespace Malachite
 
 
         //Methods---------------------
-        std::vector<MalachiteCore::VMCommand> HandleMemoryCommand(PseudoCommand cmd);
+        std::vector<MalachiteCore::VMCommand> HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
+        std::vector<MalachiteCore::VMCommand> HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
+
+        std::vector<MalachiteCore::VMCommand> HandleCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
+
         void ClearState();
 
     public:

@@ -127,36 +127,35 @@ namespace MalachiteCore
 			state->sp = df.sp;
 			break;
 		}
-		case OpCode::OP_PUSH: //dest-offset source0-reg_from 
+		case OpCode::OP_PUSH: // dest-size(source0) source0-reg_from 
 		{
-			if (state->sp < command->destination + STACK_END || state->sp - command->destination < STACK_END) {
-				return VMError::STACK_OVERFLOW;
-			}
-			state->sp -= command->destination;
+			// command->destination = размер данных (1, 2, 4, 8 байт)
+			// command->source0 = регистр-источник
 
-			if (state->sp < STACK_END || state->sp + command->destination >= STACK_START) {
-				return VMError::MEMORY_ACCESS_VIOLATION;
-			}
+			state->sp -= command->destination;  // сдвигаем SP на размер данных
 
-			*reinterpret_cast<uint64_t*>(&state->memory[state->sp]) =
-				state->registers[command->source0].u;
+			// Записываем данные из регистра в стек
+			for (int i = 0; i < command->destination; i++) {
+				uint8_t byte = (state->registers[command->source0].u >> (i * 8)) & 0xFF;
+				state->memory[state->sp + i] = byte;
+			}
 			break;
 		}
 
-		case OpCode::OP_POP:		//dest-reg_to source0-offset
+		case OpCode::OP_POP: // dest-reg_to source0-size(source0)  
 		{
-			if (state->sp >= STACK_START || state->sp + command->source0 -1 > STACK_START) {
-				return VMError::STACK_UNDERFLOW;
-			}
+			// command->source0 = размер данных (сколько байт читать)
+			// command->destination = регистр-назначение
 
-			state->registers[command->destination].u =
-				*reinterpret_cast<uint64_t*>(&state->memory[state->sp]);
-			state->sp += command->source0;
-
-			// Проверяем, что SP остался в границах стека
-			if (state->sp >= STACK_START) {  
-				return VMError::MEMORY_ACCESS_VIOLATION;
+			// Читаем данные из стека в регистр
+			uint64_t value = 0;
+			for (int i = 0; i < command->source0; i++) {
+				uint8_t byte = state->memory[state->sp + i];
+				value |= static_cast<uint64_t>(byte) << (i * 8);
 			}
+			state->registers[command->destination].u = value;
+
+			state->sp += command->source0;  // сдвигаем SP обратно
 			break;
 		}
 		case OpCode::OP_LOAD_LOCAL:
