@@ -120,6 +120,9 @@ namespace Malachite
         std::vector<MalachiteCore::VMCommand> HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
         std::vector<MalachiteCore::VMCommand> HandleCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
 
+        MalachiteCore::VMCommand ByteDecoder::GetVMTypeConvertionCommand(Type::VMAnalog first, uint64_t first_register,Type::VMAnalog second, uint64_t second_register,uint64_t& converted_register, Type::VMAnalog& result_type);
+        MalachiteCore::VMCommand GetConversionCommand(Type::VMAnalog from, Type::VMAnalog to, uint64_t reg);
+
         MalachiteCore::OpCode GetVMTypeConvertionCommand(Type::VMAnalog first, Type::VMAnalog second);  //First to second
         MalachiteCore::OpCode GetVMTypedArithmeticCommand(PseudoOpCode code, Type::VMAnalog type); 
 

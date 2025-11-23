@@ -33,8 +33,8 @@ int main()
 
 	std::string code = R"CODE(
 	{
-		int x = 239 * 568 + 34
-		int y = 239 * 568 + 34 - x
+		int x = 239 * 568.35 + 34.0/10
+		//int y = 239 * 568.35 + 34/10 - x - 1
 	}
 	
 
