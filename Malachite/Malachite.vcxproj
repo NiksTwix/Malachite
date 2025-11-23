@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Malachite.cpp" />
+    <ClCompile Include="source\compiler\BasicSyntaxDecoder.cpp" />
     <ClCompile Include="source\compiler\ByteDecoderMAR.cpp" />
     <ClCompile Include="source\compiler\ExpressionDecoder.cpp" />
     <ClCompile Include="source\compiler\ASTBuilder.cpp" />
@@ -30,6 +31,7 @@
     <ClCompile Include="source\core\functions.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\compiler\BasicSyntaxDecoder.hpp" />
     <ClInclude Include="include\compiler\ExpressionDecoder.hpp" />
     <ClInclude Include="include\compiler\ASTBuilder.hpp" />
     <ClInclude Include="include\compiler\ByteDecoder.hpp" />

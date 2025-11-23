@@ -72,8 +72,11 @@
     <ClInclude Include="include\compiler\PseudoByteDecoder.hpp">
       <Filter>Файлы заголовков\compiler\decoding</Filter>
     </ClInclude>
+    <ClInclude Include="include\compiler\BasicSyntaxDecoder.hpp">
+      <Filter>Файлы заголовков\compiler\decoding</Filter>
+    </ClInclude>
     <ClInclude Include="include\compiler\ByteDecoder.hpp">
-      <Filter>Файлы заголовков\compiler</Filter>
+      <Filter>Файлы заголовков\compiler\decoding</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -102,6 +105,9 @@
       <Filter>Исходные файлы\compiler</Filter>
     </ClCompile>
     <ClCompile Include="source\compiler\ByteDecoderMAR.cpp">
+      <Filter>Исходные файлы\compiler</Filter>
+    </ClCompile>
+    <ClCompile Include="source\compiler\BasicSyntaxDecoder.cpp">
       <Filter>Исходные файлы\compiler</Filter>
     </ClCompile>
   </ItemGroup>

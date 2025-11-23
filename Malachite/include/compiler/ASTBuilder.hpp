@@ -28,9 +28,14 @@ namespace Malachite
 		std::stack<SkipScope> skip_scopes;	
 
 		void if_scope_exception(Token& t);
-	public:
+
+		ASTNode UniteToGroup(std::vector<ASTNode>& nodes, CompilationLabel label);
+
 		
+
+	public:
 		ASTNode BuildAST(std::vector<Token>& tokens);
+		void PostprocessTree(ASTNode& node);
 	};
 
 }

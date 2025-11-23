@@ -26,6 +26,9 @@ namespace Malachite
 
         FIELD_ACCESS,   //For class.field
         METHOD_CALL,     //For class.method(params)
+
+        NODES_GROUP,
+
     };
 
 
@@ -546,14 +549,14 @@ namespace Malachite
             };
             return OpCodeToString;
         }
-
     public:
-        static TokenType GetTokenType(const std::string& string_token) 
+        #pragma region  GetMethods
+        static TokenType GetTokenType(const std::string& string_token)
         {
             auto map = GetTokensMap();
-            return map.count(string_token) ? map[string_token]: TokenType::UNDEFINED;
+            return map.count(string_token) ? map[string_token] : TokenType::UNDEFINED;
         }
-        static int GetOperationPriority(const Token& token) 
+        static int GetOperationPriority(const Token& token)
         {
             auto map = GetTokensOperationsPriorityMap();
             return map.count(token.value.strVal) ? map[token.value.strVal] : -1;
@@ -572,6 +575,19 @@ namespace Malachite
         {
             auto map = GetOpCodeStrMap();
             return map.count(code) ? map[code] : "Nop";
+        }
+        #pragma endregion
+
+        
+        enum ConditionBlockParType {NOTHING,START,MIDDLE,END};    //If - start, elif - middle, else - end
+        
+        static ConditionBlockParType GetCondtionBlockPartType(const std::string& token_str) 
+        {
+            if (token_str == "if") return ConditionBlockParType::START;
+            if (token_str == "elif") return ConditionBlockParType::MIDDLE;
+            if (token_str == "else") return ConditionBlockParType::END;
+
+            return ConditionBlockParType::NOTHING;
         }
     };
 
