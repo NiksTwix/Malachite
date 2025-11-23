@@ -13,6 +13,10 @@ namespace Malachite
 		{
 			value_stack.pop();
 		}
+		while (!frame_size_stack.empty())
+		{
+			frame_size_stack.pop();
+		}
 	}
 
 	
@@ -207,7 +211,7 @@ namespace Malachite
 	{
 		ClearState();
 		current_state = state.first;
-
+		frame_size_stack.push(0);
 		std::vector<PseudoCommand>& code = state.second;
 
 		std::vector<MalachiteCore::VMCommand> result;

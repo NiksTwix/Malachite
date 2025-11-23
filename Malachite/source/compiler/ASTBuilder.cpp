@@ -67,7 +67,7 @@ namespace Malachite
 					break;
 				case Malachite::SyntaxInfo::MIDDLE:
 					if (group_of_nodes.empty() || 
-						(SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::START && 
+						(!group_of_nodes.empty() && SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::START &&
 							SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::MIDDLE))
 					{
 						Logger::Get().PrintLogicError("Condition block without start command \"if\" or middle command \"elif\".", child_node.line);
@@ -79,7 +79,7 @@ namespace Malachite
 					break;
 				case Malachite::SyntaxInfo::END:
 					if (group_of_nodes.empty() || 
-						(SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::START && 
+						(!group_of_nodes.empty() && SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::START &&
 							SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::MIDDLE))
 					{
 						Logger::Get().PrintLogicError("Condition block without start command \"if\" or middle command \"elif\".", child_node.line);
@@ -155,6 +155,8 @@ namespace Malachite
 					Logger::Get().PrintSyntaxError("There are extra ones }.", t.line);
 					return parent;
 				}
+				///Конец области видимости переменных
+
 				if (skip_scopes.empty() || !(skip_scopes.top().flag && skip_scopes.top().depth + 1 == current_depth))
 				{
 					ASTNode scope_end;
@@ -169,7 +171,6 @@ namespace Malachite
 				cn_stack.pop();
 				cn_stack.top().children.push_back(node);
 
-				///Конец области видимости переменных
 				
 				current_depth--;
 				continue;

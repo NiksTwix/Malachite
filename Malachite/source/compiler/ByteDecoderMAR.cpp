@@ -10,6 +10,34 @@ namespace Malachite
 		//e convert the type of the right value to the left one
 		std::vector<MalachiteCore::VMCommand> result;
 		PseudoCommand cmd = cmds[ip];
+
+		auto main_ari_handler = [&]() -> void
+			{
+				ValueFrame right = value_stack.top(); value_stack.pop();
+				ValueFrame left = value_stack.top(); value_stack.pop();
+
+				uint64_t converted_reg;
+				Type::VMAnalog common_type;
+				auto conv_cmd = GetVMTypeConvertionCommand(
+					left.value_type, left.used_register,
+					right.value_type, right.used_register,
+					converted_reg, common_type
+				);
+				if (conv_cmd.operation != MalachiteCore::OpCode::OP_NOP) {
+					result.push_back(conv_cmd);
+				}
+
+				result.push_back(MalachiteCore::VMCommand(
+					GetVMTypedArithmeticCommand(cmd.op_code, common_type),
+					left.used_register,
+					left.used_register,
+					right.used_register
+				));
+
+				regsTable.Acquire(right.used_register);
+				value_stack.push(ValueFrame(left.used_register, common_type));
+			};
+
 		switch (cmd.op_code)
 		{
 		case PseudoOpCode::Add:
@@ -20,29 +48,7 @@ namespace Malachite
 				Logger::Get().PrintTypeError("Add is binary operation, but gets only one.", ip);
 				break;
 			}
-			ValueFrame right = value_stack.top(); value_stack.pop();
-			ValueFrame left = value_stack.top(); value_stack.pop();
-
-			uint64_t converted_reg;
-			Type::VMAnalog common_type;
-			auto conv_cmd = GetVMTypeConvertionCommand(
-				left.value_type, left.used_register,
-				right.value_type, right.used_register,
-				converted_reg, common_type
-			);
-			if (conv_cmd.operation != MalachiteCore::OpCode::OP_NOP) {
-				result.push_back(conv_cmd);
-			}
-
-			result.push_back(MalachiteCore::VMCommand(
-				GetVMTypedArithmeticCommand(cmd.op_code, common_type),
-				left.used_register,
-				left.used_register,
-				right.used_register
-			));
-
-			regsTable.Acquire(right.used_register);
-			value_stack.push(ValueFrame(left.used_register, common_type));
+			main_ari_handler();
 			break;
 		}
 		case PseudoOpCode::Subtract:
@@ -53,29 +59,7 @@ namespace Malachite
 				Logger::Get().PrintTypeError("Subtract is binary operation, but gets only one.", ip);
 				break;
 			}
-			ValueFrame right = value_stack.top(); value_stack.pop();
-			ValueFrame left = value_stack.top(); value_stack.pop();
-
-			uint64_t converted_reg;
-			Type::VMAnalog common_type;
-			auto conv_cmd = GetVMTypeConvertionCommand(
-				left.value_type, left.used_register,
-				right.value_type, right.used_register,
-				converted_reg, common_type
-			);
-			if (conv_cmd.operation != MalachiteCore::OpCode::OP_NOP) {
-				result.push_back(conv_cmd);
-			}
-
-			result.push_back(MalachiteCore::VMCommand(
-				GetVMTypedArithmeticCommand(cmd.op_code, common_type),
-				left.used_register,
-				left.used_register,
-				right.used_register
-			));
-
-			regsTable.Acquire(right.used_register);
-			value_stack.push(ValueFrame(left.used_register, common_type));
+			main_ari_handler();
 			break;
 		}
 		case PseudoOpCode::Multiplication:
@@ -86,28 +70,7 @@ namespace Malachite
 				Logger::Get().PrintTypeError("Multiplication is binary operation, but gets only one.", ip);
 				break;
 			}
-			ValueFrame right = value_stack.top(); value_stack.pop();
-			ValueFrame left = value_stack.top(); value_stack.pop();
-
-			uint64_t converted_reg;
-			Type::VMAnalog common_type;
-			auto conv_cmd = GetVMTypeConvertionCommand(
-				left.value_type, left.used_register,
-				right.value_type, right.used_register,
-				converted_reg, common_type
-			);
-			if (conv_cmd.operation != MalachiteCore::OpCode::OP_NOP) {
-				result.push_back(conv_cmd);
-			}
-			result.push_back(MalachiteCore::VMCommand(
-				GetVMTypedArithmeticCommand(cmd.op_code, common_type),
-				left.used_register,
-				left.used_register,
-				right.used_register
-			));
-
-			regsTable.Acquire(right.used_register);
-			value_stack.push(ValueFrame(left.used_register, common_type));
+			main_ari_handler();
 			break;
 		}
 		case PseudoOpCode::Division:
@@ -118,29 +81,7 @@ namespace Malachite
 				Logger::Get().PrintTypeError("Division is binary operation, but gets only one.", ip);
 				break;
 			}
-			ValueFrame right = value_stack.top(); value_stack.pop();
-			ValueFrame left = value_stack.top(); value_stack.pop();
-
-			uint64_t converted_reg;
-			Type::VMAnalog common_type;
-			auto conv_cmd = GetVMTypeConvertionCommand(
-				left.value_type, left.used_register,
-				right.value_type, right.used_register,
-				converted_reg, common_type
-			);
-			if (conv_cmd.operation != MalachiteCore::OpCode::OP_NOP) {
-				result.push_back(conv_cmd);
-			}
-
-			result.push_back(MalachiteCore::VMCommand(
-				GetVMTypedArithmeticCommand(cmd.op_code, common_type),
-				left.used_register,
-				left.used_register,
-				right.used_register
-			));
-
-			regsTable.Acquire(right.used_register);
-			value_stack.push(ValueFrame(left.used_register, common_type));
+			main_ari_handler();
 			break;
 		}
 		case PseudoOpCode::Mod:
