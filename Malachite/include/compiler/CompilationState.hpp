@@ -142,7 +142,7 @@ namespace Malachite
 		Type(Category category, const std::string& name) : category(category), type_id(GetGlobalID()), parent_type_id(0), name(name) {}
 		Type() : category(Category::PRIMITIVE), type_id(0), parent_type_id(0) {}
 
-		Type(const Type& other) : category(other.category), type_id(other.type_id), parent_type_id(other.parent_type_id), name(other.name)
+		Type(const Type& other) : category(other.category), type_id(other.type_id), parent_type_id(other.parent_type_id), name(other.name),size(other.size), vm_analog(other.vm_analog)
 		{
 			methods_table = other.methods_table;
 			fields_table = other.fields_table;

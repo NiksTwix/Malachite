@@ -183,14 +183,16 @@ namespace MalachiteCore
 			}
 			uint64_t address = state->fp - offset;
 			uint64_t size = command->source1;  // или command->source1, если переменный размер
-			if (address + size > MAX_MEMORY_SIZE || address + size < address) {
+			if (address > STACK_START || address - size < STACK_END) {
 				return VMError::MEMORY_ACCESS_VIOLATION;
 			}
 			state->registers[command->destination].u = 0;
+
+			uint64_t start_position = address - size + 1;
+
 			for (int i = 0; i < size; i++) {
-				uint8_t byte = state->memory[address + i];
-				state->registers[command->destination].u |=
-					(static_cast<uint64_t>(byte) << (i * 8));
+				uint8_t byte = state->memory[start_position + i];
+				state->registers[command->destination].u |= (static_cast<uint64_t>(byte) << (i * 8));
 			}
 			break;
 		}
@@ -202,13 +204,15 @@ namespace MalachiteCore
 			}
 			uint64_t size = command->source1;
 			uint64_t address = state->fp - offset;
-			if (address < STACK_END || address + size >= STACK_START) {
+			if (address > STACK_START || address - size < STACK_END) {
 				return VMError::MEMORY_ACCESS_VIOLATION;
 			}
 
+			uint64_t start_position = address - size + 1;
+
 			for (int i = 0; i < size; i++) {
 				uint8_t byte = (state->registers[command->source0].u >> (i * 8)) & 0xFF;
-				state->memory[address + i] = byte;
+				state->memory[start_position + i] = byte;
 			}
 			break;
 		}
@@ -236,15 +240,15 @@ namespace MalachiteCore
 
 			uint64_t address = target_fp - offset_val;
 
-			if (address < STACK_END || address + size >= STACK_START) {
+			if (address < STACK_END || address > STACK_START || address - size < STACK_END) {
 				return VMError::MEMORY_ACCESS_VIOLATION;
 			}
 
 			// Записываем данные из регистра-источника
-			uint64_t value = state->registers[src_reg].u;
+			uint64_t start_position = address - size + 1;
 			for (int i = 0; i < size; i++) {
-				uint8_t byte = (value >> (i * 8)) & 0xFF;
-				state->memory[address + i] = byte;
+				uint8_t byte = (state->registers[src_reg].u >> (i * 8)) & 0xFF;
+				state->memory[start_position + i] = byte;
 			}
 			break;
 		}
@@ -271,14 +275,15 @@ namespace MalachiteCore
 
 			uint64_t address = target_fp - offset_val;
 
-			if (address < STACK_END || address + size >= STACK_START) {
+			if (address < STACK_END || address > STACK_START || address - size < STACK_END) {
 				return VMError::MEMORY_ACCESS_VIOLATION;
 			}
 
 			// Читаем данные в регистр-назначение
+			uint64_t start_position = address - size + 1;
 			uint64_t value = 0;
 			for (int i = 0; i < size; i++) {
-				uint8_t byte = state->memory[address + i];
+				uint8_t byte = state->memory[start_position + i];
 				value |= static_cast<uint64_t>(byte) << (i * 8);
 			}
 			state->registers[dest_reg].u = value;
@@ -308,15 +313,15 @@ namespace MalachiteCore
 
 			uint64_t address = target_fp - offset_val;
 
-			if (address < STACK_END || address + size >= STACK_START) {
+			if (address < STACK_END || address > STACK_START || address - size < STACK_END) {
 				return VMError::MEMORY_ACCESS_VIOLATION;
 			}
 
 			// Записываем данные из регистра-источника
-			uint64_t value = state->registers[src_reg].u;
+			uint64_t start_position = address - size + 1;
 			for (int i = 0; i < size; i++) {
-				uint8_t byte = (value >> (i * 8)) & 0xFF;
-				state->memory[address + i] = byte;
+				uint8_t byte = (state->registers[src_reg].u >> (i * 8)) & 0xFF;
+				state->memory[start_position + i] = byte;
 			}
 			break;
 		}
@@ -343,14 +348,15 @@ namespace MalachiteCore
 
 			uint64_t address = target_fp - offset_val;
 
-			if (address < STACK_END || address + size >= STACK_START) {
+			if (address < STACK_END || address > STACK_START || address - size < STACK_END) {
 				return VMError::MEMORY_ACCESS_VIOLATION;
 			}
 
 			// Читаем данные в регистр-назначение
+			uint64_t start_position = address - size + 1;
 			uint64_t value = 0;
 			for (int i = 0; i < size; i++) {
-				uint8_t byte = state->memory[address + i];
+				uint8_t byte = state->memory[start_position + i];
 				value |= static_cast<uint64_t>(byte) << (i * 8);
 			}
 			state->registers[dest_reg].u = value;

@@ -19,8 +19,11 @@ namespace MalachiteCore
 			state->flags &= ~JUMPED_FLAG;
 			VMCommand* command = commands + state->ip;
 
-			if (command->operation == OpCode::OP_NOP) continue;
-
+			if (command->operation == OpCode::OP_NOP)
+			{
+				state->ip++;
+				continue;
+			}
 
 			if (OperationListBlock::IsOperationInInterval(command->operation, OperationListBlock::ARITHMETIC_START, OperationListBlock::ARITHMETIC_END))
 			{

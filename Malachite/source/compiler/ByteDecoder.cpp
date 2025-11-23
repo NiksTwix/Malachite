@@ -181,39 +181,40 @@ namespace Malachite
 		PseudoCommand cmd = cmds[ip];
 		switch (cmd.op_code)
 		{
-		case PseudoOpCode::DeclareVariable:
-		{
-			Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoFieldNames::Get().variableID_name].uintVal);
-			Type& type = current_state->types_global_table.at(var.type_id);
-			if (type.size == 0)
+			case PseudoOpCode::DeclareVariable:
 			{
-				Logger::Get().PrintLogicError("Invalid type size == 0. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
+				Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoFieldNames::Get().variableID_name].uintVal);
+				Type& type = current_state->types_global_table.at(var.type_id);
+				if (type.size == 0)
+				{
+					Logger::Get().PrintLogicError("Invalid type size == 0. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
+					break;
+				}
+				VariableInfo vi;
+				vi.depth = current_depth;
+				vi.stack_offset = frame_size_stack.top();
+				variable_depth[var.variable_id] = vi;
+				if (type.category == Type::Category::PRIMITIVE) frame_size_stack.top() += type.size;
+				if (type.category == Type::Category::CLASS) frame_size_stack.top() += sizeof(MalachiteCore::Pointer);
+				//if (type.category == Type::Category::ALIAS) frame_size_stack.top();
+				//{
+				//	//letter. Alias its common pseudoname of some type, if parent type is primitive -> push type.size, if class -> push pointer size
+				//}
+				//We need to push stack pointer
+				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_PUSH,type.size,0));	//Take trash from zero register for pulling variable's space 
 				break;
 			}
-			VariableInfo vi;
-			vi.depth = current_depth;
-			vi.stack_offset = frame_size_stack.top();
-			if (type.category == Type::Category::PRIMITIVE) frame_size_stack.top() += type.size;
-			if (type.category == Type::Category::CLASS) frame_size_stack.top() += sizeof(MalachiteCore::Pointer);
-			//if (type.category == Type::Category::ALIAS) frame_size_stack.top();
-			//{
-			//	//letter. Alias its common pseudoname of some type, if parent type is primitive -> push type.size, if class -> push pointer size
-			//}
-			//We need to push stack pointer
-			result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_PUSH,type.size,0));	//Take trash from zero register for pulling variable's space 
-			break;
-		}
-		case PseudoOpCode::DeclareFunction:
-		{
-			//Cycle with calling HandleCommand before we meet a label with value FUNCTION_END
-			break;
-		}
-		default:
-		{
-			break;
+			case PseudoOpCode::DeclareFunction:
+			{
+				//Cycle with calling HandleCommand before we meet a label with value FUNCTION_END
+				break;
+			}
+			default:
+			{
+				break;
+			}
 		}
 		return result;
-		}
 	}
 	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
 	{
@@ -224,6 +225,11 @@ namespace Malachite
 			case PseudoOpCode::Add:
 			{
 				//Use secondly register of the one operand
+				if (value_stack.size() < 2) 
+				{
+					Logger::Get().PrintTypeError("Add is binary operation, but gets only one.", ip);
+					break;
+				}
 				ValueFrame& vf_left = value_stack.top(); value_stack.pop();
 				ValueFrame& vf_right = value_stack.top(); value_stack.pop();
 				if (vf_right.value_type != vf_left.value_type)
@@ -232,11 +238,17 @@ namespace Malachite
 				}
 				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Add, vf_right.value_type), vf_right.used_register, vf_right.used_register, vf_left.used_register));
 				regsTable.Acquire(vf_left.used_register);
+				value_stack.push(ValueFrame(vf_right.used_register, vf_right.value_type));
 				break;
 			}	
 			case PseudoOpCode::Subtract:
 			{
 				//Use secondly register of the one operand
+				if (value_stack.size() < 2)
+				{
+					Logger::Get().PrintTypeError("Subtract is binary operation, but gets only one.", ip);
+					break;
+				}
 				ValueFrame& vf_left = value_stack.top(); value_stack.pop();
 				ValueFrame& vf_right = value_stack.top(); value_stack.pop();
 				if (vf_right.value_type != vf_left.value_type)
@@ -245,11 +257,17 @@ namespace Malachite
 				}
 				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Subtract, vf_right.value_type), vf_right.used_register, vf_right.used_register, vf_left.used_register));
 				regsTable.Acquire(vf_left.used_register);
+				value_stack.push(ValueFrame(vf_right.used_register, vf_right.value_type));
 				break;
 			}	
 			case PseudoOpCode::Multiplication:
 			{
 				//Use secondly register of the one operand
+				if (value_stack.size() < 2)
+				{
+					Logger::Get().PrintTypeError("Multiplication is binary operation, but gets only one.", ip);
+					break;
+				}
 				ValueFrame& vf_left = value_stack.top(); value_stack.pop();
 				ValueFrame& vf_right = value_stack.top(); value_stack.pop();
 				if (vf_right.value_type != vf_left.value_type)
@@ -258,11 +276,17 @@ namespace Malachite
 				}
 				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Multiplication, vf_right.value_type), vf_right.used_register, vf_right.used_register, vf_left.used_register));
 				regsTable.Acquire(vf_left.used_register);
+				value_stack.push(ValueFrame(vf_right.used_register, vf_right.value_type));
 				break;
 			}
 			case PseudoOpCode::Division:
 			{
 				//Use secondly register of the one operand
+				if (value_stack.size() < 2)
+				{
+					Logger::Get().PrintTypeError("Division is binary operation, but gets only one.", ip);
+					break;
+				}
 				ValueFrame& vf_left = value_stack.top(); value_stack.pop();
 				ValueFrame& vf_right = value_stack.top(); value_stack.pop();
 				if (vf_right.value_type != vf_left.value_type)
@@ -271,10 +295,16 @@ namespace Malachite
 				}
 				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Division, vf_right.value_type), vf_right.used_register, vf_right.used_register, vf_left.used_register));
 				regsTable.Acquire(vf_left.used_register);
+				value_stack.push(ValueFrame(vf_right.used_register, vf_right.value_type));
 				break;
 			}
 			case PseudoOpCode::Mod:
 			{
+				if (value_stack.size() < 2)
+				{
+					Logger::Get().PrintTypeError("Mod is binary operation, but gets only one.", ip);
+					break;
+				}
 				ValueFrame vf_right = value_stack.top(); value_stack.pop();
 				ValueFrame vf_left = value_stack.top(); value_stack.pop();
 
@@ -290,11 +320,17 @@ namespace Malachite
 				result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(PseudoOpCode::Mod, vf_right.value_type),
 					vf_right.used_register, vf_right.used_register, vf_left.used_register));
 				regsTable.Acquire(vf_left.used_register);
+				value_stack.push(ValueFrame(vf_right.used_register, vf_right.value_type));
 				break;
 			}
 
 			case PseudoOpCode::Negative:
 			{
+				if (value_stack.size() < 1)
+				{
+					Logger::Get().PrintTypeError("Negative is unary operation, but gets only zero.", ip);
+					break;
+				}
 				ValueFrame vf_left = value_stack.top(); value_stack.pop();
 
 				// Negative только для знаковых типов (INT, DOUBLE)
@@ -342,7 +378,12 @@ namespace Malachite
 			auto result1 = HandleDeclaringCommand(cmds, ip);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
-
+		//Arithmetic
+		if (pd.op_code > PseudoOpCode::START_SECTION_ARITHMETIC_OPS && pd.op_code < PseudoOpCode::END_SECTION_ARITHMETIC_OPS)
+		{
+			auto result1 = HandleArithmeticCommand(cmds, ip);
+			result.insert(result.end(), result1.begin(), result1.end());
+		}
 		return result;
 	}
 
@@ -421,10 +462,22 @@ namespace Malachite
 		std::vector<PseudoCommand>& code = state.second;
 
 		std::vector<MalachiteCore::VMCommand> result;
-
-		for (; ip < code.size(); ip++) 
+		try 
 		{
-			HandleCommand(code, ip);
+			for (; ip < code.size(); ip++)
+			{
+				auto commands = HandleCommand(code, ip);
+				result.insert(result.end(), commands.begin(), commands.end());
+			}
+		}
+		catch (std::runtime_error& e) {
+			Logger::Get().PrintLogicError(e.what(), ip);
+		}
+		catch (std::logic_error& e) {
+			Logger::Get().PrintTypeError(e.what(), ip);
+		}
+		catch (std::exception& e) {
+			Logger::Get().PrintLogicError("Unexpected error: " + std::string(e.what()), ip);
 		}
 		return result;
 	}

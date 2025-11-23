@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include <string>
+#include "..\core\operations.h"
 
 namespace Malachite 
 {
@@ -465,6 +466,87 @@ namespace Malachite
             return PseudoOpCodeToString;
         }
 
+        static std::unordered_map<MalachiteCore::OpCode, std::string>& GetOpCodeStrMap() 
+        {
+            static std::unordered_map<MalachiteCore::OpCode, std::string> OpCodeToString = {
+                {MalachiteCore::OP_NOP, "OP_NOP"},
+
+                // Arithmetic [1-30]
+                {MalachiteCore::OP_IADD_RRR, "OP_IADD_RRR"},
+                {MalachiteCore::OP_ISUB_RRR, "OP_ISUB_RRR"},
+                {MalachiteCore::OP_IMUL_RRR, "OP_IMUL_RRR"},
+                {MalachiteCore::OP_IDIV_RRR, "OP_IDIV_RRR"},
+                {MalachiteCore::OP_IMOD_RRR, "OP_IMOD_RRR"},
+                {MalachiteCore::OP_UADD_RRR, "OP_UADD_RRR"},
+                {MalachiteCore::OP_USUB_RRR, "OP_USUB_RRR"},
+                {MalachiteCore::OP_UMUL_RRR, "OP_UMUL_RRR"},
+                {MalachiteCore::OP_UDIV_RRR, "OP_UDIV_RRR"},
+                {MalachiteCore::OP_UMOD_RRR, "OP_UMOD_RRR"},
+                {MalachiteCore::OP_INEG_RR, "OP_INEG_RRR"},
+                {MalachiteCore::OP_DADD_RRR, "OP_DADD_RRR"},
+                {MalachiteCore::OP_DSUB_RRR, "OP_DSUB_RRR"},
+                {MalachiteCore::OP_DMUL_RRR, "OP_DMUL_RRR"},
+                {MalachiteCore::OP_DDIV_RRR, "OP_DDIV_RRR"},
+                {MalachiteCore::OP_DNEG_RR, "OP_DNEG_RR"},
+
+                // Logic [31-60]
+                {MalachiteCore::OP_AND_RRR, "OP_AND_RRR"},
+                {MalachiteCore::OP_OR_RRR, "OP_OR_RRR"},
+                {MalachiteCore::OP_NOT_RR, "OP_NOT_RR"},
+                {MalachiteCore::OP_CMP_RR, "OP_CMP_RR"},
+                {MalachiteCore::OP_DCMP_RR, "OP_DCMP_RR"},
+                {MalachiteCore::OP_BIT_OR_RRR, "OP_BIT_OR_RRR"},
+                {MalachiteCore::OP_BIT_NOT_RR, "OP_BIT_NOT_RR"},
+                {MalachiteCore::OP_BIT_AND_RRR, "OP_BIT_AND_RRR"},
+                {MalachiteCore::OP_BIT_OFFSET_LEFT_RRR, "OP_BIT_OFFSET_LEFT_RRR"},
+                {MalachiteCore::OP_BIT_OFFSET_RIGHT_RRR, "OP_BIT_OFFSET_RIGHT_RRR"},
+
+                // Memory [61-80]
+                {MalachiteCore::OP_LOAD_RM, "OP_LOAD_RM"},
+                {MalachiteCore::OP_STORE_MR, "OP_STORE_MR"},
+                {MalachiteCore::OP_MOV_RR, "OP_MOV_RR"},
+                {MalachiteCore::OP_MOV_RI_INT, "OP_MOV_RI_INT"},
+                {MalachiteCore::OP_MOV_RI_UINT, "OP_MOV_RI_UINT"},
+                {MalachiteCore::OP_MOV_RI_DOUBLE, "OP_MOV_RI_DOUBLE"},
+                {MalachiteCore::OP_CREATE_FRAME, "OP_CREATE_FRAME"},
+                {MalachiteCore::OP_DESTROY_FRAME, "OP_DESTROY_FRAME"},
+                {MalachiteCore::OP_PUSH, "OP_PUSH"},
+                {MalachiteCore::OP_POP, "OP_POP"},
+                {MalachiteCore::OP_LOAD_LOCAL, "OP_LOAD_LOCAL"},
+                {MalachiteCore::OP_STORE_LOCAL, "OP_STORE_LOCAL"},
+                {MalachiteCore::OP_STORE_ENCLOSING_A, "OP_STORE_ENCLOSING_A"},
+                {MalachiteCore::OP_LOAD_ENCLOSING_A, "OP_LOAD_ENCLOSING_A"},
+                {MalachiteCore::OP_STORE_ENCLOSING_R, "OP_STORE_ENCLOSING_R"},
+                {MalachiteCore::OP_LOAD_ENCLOSING_R, "OP_LOAD_ENCLOSING_R"},
+                {MalachiteCore::OP_ALLOCATE_MEMORY, "OP_ALLOCATE_MEMORY"},
+                {MalachiteCore::OP_FREE_MEMORY, "OP_FREE_MEMORY"},
+
+                // Control flow [91-120]
+                {MalachiteCore::OP_JMP, "OP_JMP"},
+                {MalachiteCore::OP_JE, "OP_JE"},
+                {MalachiteCore::OP_JNE, "OP_JNE"},
+                {MalachiteCore::OP_JL, "OP_JL"},
+                {MalachiteCore::OP_JG, "OP_JG"},
+                {MalachiteCore::OP_JEL, "OP_JEL"},
+                {MalachiteCore::OP_JEG, "OP_JEG"},
+                {MalachiteCore::OP_CALL, "OP_CALL"},
+                {MalachiteCore::OP_RET, "OP_RET"},
+                {MalachiteCore::OP_HALT, "OP_HALT"},
+
+                // System Calls [121]
+                {MalachiteCore::OP_SYSTEM_CALL, "OP_SYSTEM_CALL"},
+
+                // Type Conversion [122-127]
+                {MalachiteCore::OP_TC_ITD_R, "OP_TC_ITD_R"},
+                {MalachiteCore::OP_TC_DTI_R, "OP_TC_DTI_R"},
+                {MalachiteCore::OP_TC_UITD_R, "OP_TC_UITD_R"},
+                {MalachiteCore::OP_TC_UITI_R, "OP_TC_UITI_R"},
+                {MalachiteCore::OP_TC_DTUI_R, "OP_TC_DTUI_R"},
+                {MalachiteCore::OP_TC_ITUI_R, "OP_TC_ITUI_R"}
+            };
+            return OpCodeToString;
+        }
+
     public:
         static TokenType GetTokenType(const std::string& string_token) 
         {
@@ -484,6 +566,11 @@ namespace Malachite
         static std::string GetPseudoString(const PseudoOpCode& code)
         {
             auto map = GetStringPseudoMap();
+            return map.count(code) ? map[code] : "Nop";
+        }
+        static std::string GetByteString(const MalachiteCore::OpCode& code)
+        {
+            auto map = GetOpCodeStrMap();
             return map.count(code) ? map[code] : "Nop";
         }
     };

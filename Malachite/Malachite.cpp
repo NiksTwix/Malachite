@@ -4,12 +4,13 @@
 #include "include/compiler/Lexer.hpp"
 #include "include/compiler/ASTBuilder.hpp"
 #include "include/compiler/PseudoByteDecoder.hpp"
+#include "include/compiler/ByteDecoder.hpp"
 #include <vector>
 using namespace MalachiteCore;
 
 int main()
 {
-	VMState state;
+	
 
 
 	//test
@@ -32,8 +33,8 @@ int main()
 
 	std::string code = R"CODE(
 	{
-		int x = 239 *568 + 34
-		int y = 239 *568 + 34 - x
+		int x = 239 * 568 + 34
+		int y = 239 * 568 + 34 - x
 	}
 	
 
@@ -45,7 +46,9 @@ int main()
 	auto tree = astbuilder.BuildAST(tokens);
 	Malachite::PseudoByteDecoder pbd;
 	auto r = pbd.GeneratePseudoCode(tree.children);
-
+	Malachite::ByteDecoder bd;
+	auto r1 = bd.PseudoToByte(r);
+	std::cout << "PseudoByteCode-------------------------------\n";
 	for (auto& t : r.second) 
 	{
 		std::string output;
@@ -56,5 +59,34 @@ int main()
 		}
 		Malachite::Logger::Get().PrintInfo(output);
 	}
+	std::cout << "ByteCode-------------------------------------\n";
+	for (auto& t1 : r1)
+	{
+		std::string output;
+		output += Malachite::SyntaxInfo::GetByteString(t1.operation) + "  ";
+		output += std::to_string(t1.destination) + "\t";
+		output += std::to_string(t1.source0) + "\t";
+		output += std::to_string(t1.source1) + "\t";
+		output += std::to_string(t1.immediate.i) + "I|\t";
+		output += std::to_string(t1.immediate.u) + "U|\t";
+		output += std::to_string(t1.immediate.d) + "D|\t";
+		Malachite::Logger::Get().PrintInfo(output);
+	}
 
+	VMState state;
+	MalachiteCore::VMError err = execute(&state, r1.data(), r1.size());
+	
+	if (err)
+	{
+		auto r = state.error_stack.top();
+		std::cout << "Error:" << (uint16_t)err << " " << "IP:" << r.ip << "\n";
+	}
+
+
+	std::cout << "i" << " " << "u" << " " << "d" << "\n";
+	for (int i = 0; i < MalachiteCore::REGISTER_COUNT; i++) 
+	{
+		auto reg = state.registers[i];
+		std::cout << reg.i << "," << reg.u << "," << reg.d << "\n";
+	}
 }
