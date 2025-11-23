@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Malachite.cpp" />
+    <ClCompile Include="source\compiler\ByteDecoderMAR.cpp" />
     <ClCompile Include="source\compiler\ExpressionDecoder.cpp" />
     <ClCompile Include="source\compiler\ASTBuilder.cpp" />
     <ClCompile Include="source\compiler\ByteDecoder.cpp" />
