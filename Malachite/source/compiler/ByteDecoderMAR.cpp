@@ -14,13 +14,13 @@ namespace Malachite
 		auto main_ari_handler = [&]() -> void
 			{
 				//Use secondly register of the one operand
-				if (value_stack.size() < 2)
+				if (current_BDS.value_stack.size() < 2)
 				{
 					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
 					return;
 				}
-				ValueFrame right = value_stack.top(); value_stack.pop();
-				ValueFrame left = value_stack.top(); value_stack.pop();
+				ValueFrame right = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
+				ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 
 				uint64_t converted_reg;
 				Type::VMAnalog common_type;
@@ -40,8 +40,8 @@ namespace Malachite
 					right.used_register
 				));
 
-				regsTable.Release(right.used_register);
-				value_stack.push(ValueFrame(left.used_register, common_type));
+				current_BDS.regsTable.Release(right.used_register);
+				current_BDS.value_stack.push(ValueFrame(left.used_register, common_type));
 			};
 
 		switch (cmd.op_code)
@@ -69,13 +69,13 @@ namespace Malachite
 		}
 		case PseudoOpCode::Mod:
 		{
-			if (value_stack.size() < 2)
+			if (current_BDS.value_stack.size() < 2)
 			{
 				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
 				break;
 			}
-			ValueFrame right = value_stack.top(); value_stack.pop();
-			ValueFrame left = value_stack.top(); value_stack.pop();
+			ValueFrame right = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
+			ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 
 			// Mod только для целых типов
 			if ((left.value_type != Type::VMAnalog::INT && left.value_type != Type::VMAnalog::UINT) || (right.value_type != Type::VMAnalog::INT && right.value_type != Type::VMAnalog::UINT)) {
@@ -100,19 +100,19 @@ namespace Malachite
 				right.used_register
 			));
 
-			regsTable.Release(right.used_register);
-			value_stack.push(ValueFrame(left.used_register, common_type));
+			current_BDS.regsTable.Release(right.used_register);
+			current_BDS.value_stack.push(ValueFrame(left.used_register, common_type));
 			break;
 		}
 
 		case PseudoOpCode::Negative:
 		{
-			if (value_stack.size() < 1)
+			if (current_BDS.value_stack.size() < 1)
 			{
 				Logger::Get().PrintTypeError("Negative is unary operation, but gets only zero.", ip);
 				break;
 			}
-			ValueFrame vf_left = value_stack.top(); value_stack.pop();
+			ValueFrame vf_left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 
 			// Negative только для знаковых типов (INT, DOUBLE)
 			if (vf_left.value_type != Type::VMAnalog::INT && vf_left.value_type != Type::VMAnalog::DOUBLE) {
@@ -122,7 +122,7 @@ namespace Malachite
 
 			result.push_back(MalachiteCore::VMCommand(GetVMTypedArithmeticCommand(cmd.op_code, vf_left.value_type),
 				vf_left.used_register, vf_left.used_register));
-			value_stack.push(ValueFrame(vf_left.used_register, vf_left.value_type));
+			current_BDS.value_stack.push(ValueFrame(vf_left.used_register, vf_left.value_type));
 			break;
 		}
 		}
@@ -134,13 +134,13 @@ namespace Malachite
 		PseudoCommand cmd = cmds[ip];
 		auto main_logic_handler = [&]() -> void
 			{
-				if (value_stack.size() < 2)
+				if (current_BDS.value_stack.size() < 2)
 				{
 					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
 					return;
 				}
-				ValueFrame right = value_stack.top(); value_stack.pop();
-				ValueFrame left = value_stack.top(); value_stack.pop();
+				ValueFrame right = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
+				ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 
 				result.push_back(MalachiteCore::VMCommand(
 					GetVMLogicCommand(cmd.op_code,Type::VMAnalog::UINT),
@@ -149,18 +149,18 @@ namespace Malachite
 					right.used_register
 				));
 
-				regsTable.Release(right.used_register);
-				value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
+				current_BDS.regsTable.Release(right.used_register);
+				current_BDS.value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
 			};
 		auto main_cmp_handler = [&](uint32_t flag) -> void
 			{
-				if (value_stack.size() < 2)
+				if (current_BDS.value_stack.size() < 2)
 				{
 					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
 					return;
 				}
-				ValueFrame right = value_stack.top(); value_stack.pop();
-				ValueFrame left = value_stack.top(); value_stack.pop();
+				ValueFrame right = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
+				ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 
 				uint64_t converted_reg;
 				Type::VMAnalog common_type;
@@ -184,8 +184,8 @@ namespace Malachite
 					left.used_register,
 					flag
 				));
-				regsTable.Release(right.used_register);
-				value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//flag 0,1
+				current_BDS.regsTable.Release(right.used_register);
+				current_BDS.value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//flag 0,1
 			};
 		switch (cmd.op_code)
 		{
@@ -197,12 +197,12 @@ namespace Malachite
 			break;
 		case PseudoOpCode::Not:
 		{
-			if (value_stack.size() < 1)
+			if (current_BDS.value_stack.size() < 1)
 			{
 				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is unary operation, but gets only zero.", ip);
 				break;
 			}
-			ValueFrame left = value_stack.top(); value_stack.pop();
+			ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 
 			result.push_back(MalachiteCore::VMCommand(
 				MalachiteCore::OpCode::OP_NOT_RR,
@@ -210,7 +210,7 @@ namespace Malachite
 				left.used_register
 			));
 
-			value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
+			current_BDS.value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
 		}
 			break;
 		case PseudoOpCode::BitOr:
@@ -218,12 +218,12 @@ namespace Malachite
 			break;
 		case PseudoOpCode::BitNot:
 		{
-			if (value_stack.size() < 1)
+			if (current_BDS.value_stack.size() < 1)
 			{
 				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is unary operation, but gets only zero.", ip);
 				break;
 			}
-			ValueFrame left = value_stack.top(); value_stack.pop();
+			ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 
 			result.push_back(MalachiteCore::VMCommand(
 				MalachiteCore::OpCode::OP_BIT_NOT_RR,
@@ -231,7 +231,7 @@ namespace Malachite
 				left.used_register
 			));
 
-			value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
+			current_BDS.value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
 		}
 			break;
 		case PseudoOpCode::BitAnd:
@@ -279,9 +279,9 @@ namespace Malachite
 			{
 				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
 
-				if (!labels.count(l_id))
+				if (!current_BDS.labels.count(l_id))
 				{
-					waiting_jumps[l_id].push_back({ ip,current_commands->size() });
+					current_BDS.waiting_jumps[l_id].push_back({ ip,current_BDS.current_commands->size() });
 					result.push_back(MalachiteCore::VMCommand(
 						MalachiteCore::OpCode::OP_JMP,
 						l_id
@@ -289,7 +289,7 @@ namespace Malachite
 				}
 				else 
 				{
-					uint64_t jump_ip = labels[l_id];
+					uint64_t jump_ip = current_BDS.labels[l_id];
 					result.push_back(MalachiteCore::VMCommand(
 						MalachiteCore::OpCode::OP_JMP,
 						jump_ip
@@ -299,17 +299,17 @@ namespace Malachite
 			break;
 			case PseudoOpCode::JumpIf:
 			{
-				if (value_stack.size() < 1)
+				if (current_BDS.value_stack.size() < 1)
 				{
 					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a boolean value.", ip);
 					break;
 				}
-				ValueFrame left = value_stack.top(); value_stack.pop();
+				ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
 
-				if (!labels.count(l_id))
+				if (!current_BDS.labels.count(l_id))
 				{
-					waiting_jumps[l_id].push_back({ ip,current_commands->size() });
+					current_BDS.waiting_jumps[l_id].push_back({ ip,current_BDS.current_commands->size() });
 					result.push_back(MalachiteCore::VMCommand(
 						MalachiteCore::OpCode::OP_JMP_CV,
 						l_id,
@@ -318,28 +318,28 @@ namespace Malachite
 				}
 				else
 				{
-					uint64_t jump_ip = labels[l_id];
+					uint64_t jump_ip = current_BDS.labels[l_id];
 					result.push_back(MalachiteCore::VMCommand(
 						MalachiteCore::OpCode::OP_JMP_CV,
 						jump_ip,
 						left.used_register));
 				}
-				regsTable.Release(left.used_register);
+				current_BDS.regsTable.Release(left.used_register);
 			}
 			break;
 			case PseudoOpCode::JumpNotIf:
 			{
-				if (value_stack.size() < 1)
+				if (current_BDS.value_stack.size() < 1)
 				{
 					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a boolean value.", ip);
 					break;
 				}
-				ValueFrame left = value_stack.top(); value_stack.pop();
+				ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
 
-				if (!labels.count(l_id))
+				if (!current_BDS.labels.count(l_id))
 				{
-					waiting_jumps[l_id].push_back({ ip,current_commands->size() });
+					current_BDS.waiting_jumps[l_id].push_back({ ip,current_BDS.current_commands->size() });
 					result.push_back(MalachiteCore::VMCommand(
 						MalachiteCore::OpCode::OP_JMP_CNV,
 						l_id,
@@ -348,35 +348,35 @@ namespace Malachite
 				}
 				else
 				{
-					uint64_t jump_ip = labels[l_id];
+					uint64_t jump_ip = current_BDS.labels[l_id];
 					result.push_back(MalachiteCore::VMCommand(
 						MalachiteCore::OpCode::OP_JMP_CNV,
 						jump_ip,
 						left.used_register));
 				}
-				regsTable.Release(left.used_register);
+				current_BDS.regsTable.Release(left.used_register);
 			}
 			break;
 			case PseudoOpCode::Label:
 			{
 				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
 
-				if (labels.count(l_id)) 
+				if (current_BDS.labels.count(l_id))
 				{
 					Logger::Get().PrintTypeError("Label with id = " + std::to_string(l_id) + " already exists.",ip);
 					break;
 				}
 
-				auto last_ip = current_commands->size();
+				auto last_ip = current_BDS.current_commands->size();
 
-				labels[l_id] = last_ip;
-				if (waiting_jumps.count(l_id)) 
+				current_BDS.labels[l_id] = last_ip;
+				if (current_BDS.waiting_jumps.count(l_id))
 				{
-					for (auto& jump_ip : waiting_jumps[l_id])
+					for (auto& jump_ip : current_BDS.waiting_jumps[l_id])
 					{
-						current_commands->at(jump_ip.second).destination = last_ip;
+						current_BDS.current_commands->at(jump_ip.second).destination = last_ip;
 					}
-					waiting_jumps.erase(l_id);
+					current_BDS.waiting_jumps.erase(l_id);
 				}
 			}
 			break;
@@ -392,7 +392,7 @@ namespace Malachite
 		case PseudoOpCode::Immediate:
 		{
 			TokenValue val = cmd.parameters[PseudoCodeInfo::Get().valueID_name];
-			auto free_register = regsTable.Allocate();
+			auto free_register = current_BDS.regsTable.Allocate();
 			if (free_register == InvalidRegister)
 			{
 				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
@@ -404,27 +404,27 @@ namespace Malachite
 				return result;
 			case Malachite::TokenValueType::INT:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_INT, free_register, MalachiteCore::Register(val.intVal)));
-				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::INT));
+				current_BDS.value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::INT));
 				return result;
 			case Malachite::TokenValueType::UINT:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_UINT, free_register, MalachiteCore::Register(val.uintVal)));
-				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::UINT));
+				current_BDS.value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::UINT));
 				return result;
 
 			case Malachite::TokenValueType::FLOAT:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_DOUBLE, free_register, MalachiteCore::Register(val.floatVal)));
-				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::DOUBLE));
+				current_BDS.value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::DOUBLE));
 				return result;
 			case Malachite::TokenValueType::STRING:
 				Logger::Get().PrintTypeError("Attemp of direct immediating string value. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
 				return result;
 			case Malachite::TokenValueType::CHAR:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_INT, free_register, MalachiteCore::Register((int64_t)val.charVal)));
-				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::INT));
+				current_BDS.value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::INT));
 				return result;
 			case Malachite::TokenValueType::BOOL:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_UINT, free_register, MalachiteCore::Register((uint64_t)val.boolVal)));
-				value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::UINT));
+				current_BDS.value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::UINT));
 				return result;
 			}
 			break;
@@ -435,10 +435,10 @@ namespace Malachite
 			break;
 		case PseudoOpCode::Load:
 		{
-			Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
-			Type& type = current_state->types_global_table.at(var.type_id);
-			auto info = variable_depth.at(var.variable_id);
-			auto free_register = regsTable.Allocate();
+			Variable& var = current_BDS.current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
+			Type& type = current_BDS.current_state->types_global_table.at(var.type_id);
+			auto info = current_BDS.variable_depth.at(var.variable_id);
+			auto free_register = current_BDS.regsTable.Allocate();
 			if (free_register == InvalidRegister)
 			{
 				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
@@ -448,7 +448,7 @@ namespace Malachite
 			if (type.category == Type::Category::PRIMITIVE)
 			{
 				//PseudoDecoder checked vars validity
-				if (info.depth == current_depth)
+				if (info.depth == current_BDS.current_depth)
 				{
 					result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_LOAD_LOCAL, free_register, info.stack_offset, type.size));
 
@@ -464,7 +464,7 @@ namespace Malachite
 					Logger::Get().PrintLogicError("Primitive type \"" + type.name + "\" hasnt analog in the Malachite Virtual Machine.Instruction pointer of pseudo code : " + std::to_string(ip), ip);
 					break;
 				}
-				value_stack.push(ValueFrame(var.variable_id, free_register, type.vm_analog));
+				current_BDS.value_stack.push(ValueFrame(var.variable_id, free_register, type.vm_analog));
 				return result;
 			}
 			else if (type.category == Type::Category::ALIAS)
@@ -479,17 +479,17 @@ namespace Malachite
 		}
 		case PseudoOpCode::Store:
 		{
-			Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
-			Type& type = current_state->types_global_table.at(var.type_id);
-			auto info = variable_depth.at(var.variable_id);
+			Variable& var = current_BDS.current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
+			Type& type = current_BDS.current_state->types_global_table.at(var.type_id);
+			auto info = current_BDS.variable_depth.at(var.variable_id);
 
 			// We need some history about register using. As example, we have this expression: x = 2 * 3
 			// 2 and 3 in values stack, but where is multiplier's result? 
 			// I think we should to save to values stack value frame with fields register_to_save (or another name) and type = OPERATION_RESULT
 			// It also must be when we call function or something another
 
-			ValueFrame& vf = value_stack.top();
-			value_stack.pop();
+			ValueFrame& vf = current_BDS.value_stack.top();
+			current_BDS.value_stack.pop();
 			if (vf.used_register == InvalidRegister)
 			{
 				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
@@ -505,7 +505,7 @@ namespace Malachite
 						result.push_back(MalachiteCore::VMCommand(conv_cmd_opcode, vf.used_register));
 					}
 				}
-				if (info.depth == current_depth)
+				if (info.depth == current_BDS.current_depth)
 				{
 					result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_STORE_LOCAL, info.stack_offset, vf.used_register, type.size));
 				}
@@ -515,7 +515,7 @@ namespace Malachite
 					size_and_depth |= info.depth;	//uint64_t and int64_t size...0 -> size...depth
 					result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_STORE_ENCLOSING_A, info.stack_offset, vf.used_register, size_and_depth));
 				}
-				regsTable.Release(vf.used_register);
+				current_BDS.regsTable.Release(vf.used_register);
 				return result;
 			}
 			else if (type.category == Type::Category::ALIAS)

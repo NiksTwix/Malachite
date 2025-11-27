@@ -1,5 +1,6 @@
 #pragma once
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include "..\core\operations.h"
 
@@ -261,6 +262,14 @@ namespace Malachite
         Call,
         Return,
         END_SECTION_CONTROL_FLOW_OPS,
+
+        OpCodeStart,
+        OpCodeAllocateBasicRegisters,    //RA-RH, for byte decoder!
+        OpCodeCommand,     //In parameters: OP_CODE, destination, source0,source1
+        OpCodeStoreVR,
+        OpCodeLoadRV,
+        OpCodeEnd,
+
         //System calls ->  welcome to op_code {...}
 
         //OOP
@@ -280,8 +289,7 @@ namespace Malachite
         static std::unordered_map<std::string, TokenType>& GetTokensMap() 
         {
             static std::unordered_map<std::string, TokenType> tokensMap = {
-				{"+", TokenType::OPERATOR},
-				{"-", TokenType::OPERATOR},
+				{"+", TokenType::OPERATOR},{"-", TokenType::OPERATOR},
                 {"+u", TokenType::OPERATOR},    //u-unary
                 {"-u", TokenType::OPERATOR},
 				{"/", TokenType::OPERATOR},
@@ -468,7 +476,13 @@ namespace Malachite
                 {PseudoOpCode::JumpIf, "JumpIf"},
                 {PseudoOpCode::JumpNotIf, "JumpNotIf"},
                 {PseudoOpCode::Call, "Call"},
-                {PseudoOpCode::Return, "Return"}
+                {PseudoOpCode::Return, "Return"},
+                {PseudoOpCode::OpCodeStart, "OpCodeStart"},
+                {PseudoOpCode::OpCodeEnd, "OpCodeEnd"},
+                {PseudoOpCode::OpCodeStoreVR, "OpCodeStoreVR"},
+                {PseudoOpCode::OpCodeLoadRV, "OpCodeLoadRV"},
+                {PseudoOpCode::OpCodeCommand, "OpCodeCommand"},
+                {PseudoOpCode::OpCodeAllocateBasicRegisters, "OpCodeAllocateBasicRegisters"},
             };
 
             return PseudoOpCodeToString;
@@ -551,6 +565,19 @@ namespace Malachite
             };
             return OpCodeToString;
         }
+        static std::unordered_map< std::string, MalachiteCore::OpCode>& GetStrOpCodeMap()
+        {
+            static std::unordered_map< std::string, MalachiteCore::OpCode> StringToOpCode{};
+
+            if (StringToOpCode.size() == 0)     //not inited
+            {
+                for (auto& pair_ : GetOpCodeStrMap()) 
+                {
+                    StringToOpCode.insert({pair_.second,pair_.first});
+                }
+            }
+            return StringToOpCode;
+        }
     public:
         #pragma region  GetMethods
         static TokenType GetTokenType(const std::string& string_token)
@@ -578,6 +605,17 @@ namespace Malachite
             auto map = GetOpCodeStrMap();
             return map.count(code) ? map[code] : "Nop";
         }
+        static MalachiteCore::OpCode GetByteFromString(const std::string& code)
+        {
+            auto map = GetStrOpCodeMap();
+            return map.count(code) ? map[code] : MalachiteCore::OpCode::OP_NOP;
+        }
+        static std::unordered_set<std::string> GetOpCodeRegistersList() 
+        {
+            static std::unordered_set<std::string> opCodeRegisters = { "RA","RB","RC","RD","RE","RF","RG","RH" };
+            return opCodeRegisters;
+        }
+
         #pragma endregion
 
         
@@ -604,6 +642,17 @@ namespace Malachite
         const std::string valueID_name = "Value";
         const std::string labelID_name = "ID";
         const std::string labelMark_name = "Mark";
+        const std::string sectionName_name = "SectionName";
+
+        const std::string opcodeCommandCode_name = "OpCode";
+        
+        const std::string opcodeDestination_name = "Destination";
+        const std::string opcodeSource0_name = "Source0";
+        const std::string opcodeSource1_name = "Source1";
+        const std::string opcodeImmediate_name = "Immediate";
+
+        const std::string opcodeStoreCommand_name = "STORE_VR";
+        const std::string opcodeLoadCommand_name = "LOAD_RV";
         uint64_t GetNewLabelID()
         {
             return global_label_id++;

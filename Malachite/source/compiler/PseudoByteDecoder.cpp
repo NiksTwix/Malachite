@@ -66,6 +66,13 @@ namespace Malachite
 		{
 			if (auto& child = node.children[0]; child.tokens.size() > 0 && child.tokens[0].value.strVal == "if") result = ParseConditionBlock(node);	//"if" is the start block
 		}
+		if (node.tokens[0].type == TokenType::KEYWORD)
+		{
+			if (auto& child = node.children[0]; child.tokens.size() > 0 && node.tokens[0].value.strVal == "op_code")
+			{
+				result = ParseOpCodeBlock(node);	//"if" is the start block
+			}
+		}
 		//else if
 		return result;
 	}
@@ -173,6 +180,117 @@ namespace Malachite
 		}
 
 		if (use_end_label) commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name, TokenValue(skip_label_id)},{PseudoCodeInfo::Get().labelMark_name, TokenValue("SkipLabel")}}));
+
+		return commands;
+	}
+
+	std::vector<PseudoCommand> PseudoByteDecoder::ParseOpCodeBlock(const ASTNode& node)
+	{
+		std::vector<PseudoCommand> commands;
+		commands.push_back(PseudoCommand(PseudoOpCode::OpCodeStart, { {PseudoCodeInfo::Get().sectionName_name, node.tokens.size() >= 2 ? node.tokens[1].value.strVal : ""} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::OpCodeAllocateBasicRegisters));
+		for (size_t i = 0; i < node.children.size(); i++) 
+		{
+			//STRUCTURE: OpCode destination, source0,source1,imm
+			if (node.children[i].tokens.size() == 0) {Logger::Get().PrintWarning("OpCode command doenst have anybody arguments. Operation will be skipped.", node.children[i].line);continue;}
+			std::vector<Token> without_delimiters;
+			for (auto& t : node.children[i].tokens) 
+			{
+				if (t.type == TokenType::COMPILATION_LABEL && t.value.uintVal == (uint64_t)CompilationLabel::OPERATION_END) break;
+				if (t.type != TokenType::DELIMITER)without_delimiters.push_back(t);
+			}
+			if (without_delimiters.size() == 0){Logger::Get().PrintSyntaxError("Invalid opcode command.", node.children[i].line);continue;}
+
+			//token analysis
+			//first - opcode
+			PseudoCommand pc;
+			pc.op_code = PseudoOpCode::OpCodeCommand;
+			auto opcode_str = without_delimiters.front().value.strVal;
+			if (opcode_str.empty()) 
+			{
+				Logger::Get().PrintSyntaxError("Null opcode operation.", node.children[i].line);
+				continue;
+			}
+			auto arguments = StringOperations::TrimVector<Token>(without_delimiters, 1, without_delimiters.size() - 1);
+
+			//Load/Store variable
+
+			if (opcode_str == PseudoCodeInfo::Get().opcodeStoreCommand_name && arguments.size() >= 2) //dest - variable src0 - register or imm - constant
+			{
+				pc.op_code = PseudoOpCode::OpCodeStoreVR;
+				auto* var = compilation_state->FindVariable(arguments[0].value.strVal);
+				if (!var) 
+				{
+					Logger::Get().PrintLogicError("Undefined variable \"" + arguments[0].value.strVal + "\" in opcode section.", node.children[i].line);
+					continue;
+				}
+				pc.parameters[PseudoCodeInfo::Get().opcodeDestination_name] = var->variable_id;
+				auto value = arguments[1];
+				if (SyntaxInfo::GetOpCodeRegistersList().count(value.value.strVal)) 
+				{
+					pc.parameters[PseudoCodeInfo::Get().opcodeSource0_name] = value.value.strVal;
+				}
+				else 
+				{
+					pc.parameters[PseudoCodeInfo::Get().opcodeImmediate_name] = value.value;
+				}
+				commands.push_back(pc);
+				continue;
+			}
+			else if (opcode_str == PseudoCodeInfo::Get().opcodeLoadCommand_name && arguments.size() >= 2) //dest - register src0 - variable
+			{
+				pc.op_code = PseudoOpCode::OpCodeLoadRV;
+				auto* var = compilation_state->FindVariable(arguments[1].value.strVal);
+				if (!var && !SyntaxInfo::GetOpCodeRegistersList().count(arguments[1].value.strVal))
+				{
+					Logger::Get().PrintLogicError("Undefined variable \"" + arguments[1].value.strVal + "\" in opcode section.", node.children[i].line);
+					continue;
+				}
+				auto register_ = arguments[0];
+				if (SyntaxInfo::GetOpCodeRegistersList().count(register_.value.strVal))
+				{
+					pc.parameters[PseudoCodeInfo::Get().opcodeDestination_name] = register_.value.strVal;
+				}
+				else
+				{
+					Logger::Get().PrintLogicError("Invalid register \"" + register_.value.strVal + "\" in opcode section.", node.children[i].line);
+					continue;
+				}
+				pc.parameters[PseudoCodeInfo::Get().opcodeSource0_name] = var->variable_id;
+				commands.push_back(pc);
+				continue;
+			}
+
+			pc.parameters[PseudoCodeInfo::Get().opcodeCommandCode_name] = (uint64_t)SyntaxInfo::GetByteFromString(opcode_str);
+
+			
+
+			//All another cases
+			for (size_t j = 0; j < arguments.size() && j < 5; j++) // j < 5 because vm command contains only 4 argument (OpCode isnt included)
+			{
+				std::string arg_name = PseudoCodeInfo::Get().opcodeImmediate_name;
+				if (j == 0) arg_name = PseudoCodeInfo::Get().opcodeDestination_name;
+				if (j == 1 && arguments[j].type == TokenType::IDENTIFIER) arg_name = PseudoCodeInfo::Get().opcodeSource0_name;
+				if (j == 2 && arguments[j].type == TokenType::IDENTIFIER) arg_name = PseudoCodeInfo::Get().opcodeSource1_name;
+
+				if (arg_name == PseudoCodeInfo::Get().opcodeImmediate_name)pc.parameters[arg_name] = arguments[j].value;
+				else //check registers
+				{
+					if (SyntaxInfo::GetOpCodeRegistersList().count(arguments[j].value.strVal))
+					{
+						pc.parameters[arg_name] = arguments[j].value.strVal;
+					}
+					else if (arguments[j].value.strVal != "")
+					{
+						Logger::Get().PrintLogicError("Invalid register \"" + arguments[j].value.strVal + "\" in opcode section.", node.children[i].line);
+						continue;
+					}
+				}
+				
+			}
+			commands.push_back(pc);
+		}
+		commands.push_back(PseudoCommand(PseudoOpCode::OpCodeEnd));
 
 		return commands;
 	}

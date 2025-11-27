@@ -4,22 +4,7 @@ namespace Malachite
 {
 	void Malachite::ByteDecoder::ClearState()
 	{
-		current_depth = StartDepth;
-		regsTable.Clear();
-		current_state = nullptr;
-		current_commands = nullptr;
-		variable_depth.clear();
-		waiting_jumps.clear();
-		labels.clear();
-		ip = 0;
-		while (!value_stack.empty())
-		{
-			value_stack.pop();
-		}
-		while (!frame_size_stack.empty())
-		{
-			frame_size_stack.pop();
-		}
+		current_BDS = ByteDecodingState();
 	}
 
 	
@@ -32,19 +17,19 @@ namespace Malachite
 		{
 			case PseudoOpCode::DeclareVariable:
 			{
-				Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
-				Type& type = current_state->types_global_table.at(var.type_id);
+				Variable& var = current_BDS.current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
+				Type& type = current_BDS.current_state->types_global_table.at(var.type_id);
 				if (type.size == 0)
 				{
 					Logger::Get().PrintLogicError("Invalid type size == 0. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
 					break;
 				}
 				VariableInfo vi;
-				vi.depth = current_depth;
-				vi.stack_offset = frame_size_stack.top();
-				variable_depth[var.variable_id] = vi;
-				if (type.category == Type::Category::PRIMITIVE) frame_size_stack.top() += type.size;
-				if (type.category == Type::Category::CLASS) frame_size_stack.top() += sizeof(MalachiteCore::Pointer);
+				vi.depth = current_BDS.current_depth;
+				vi.stack_offset = current_BDS.frame_size_stack.top();
+				current_BDS.variable_depth[var.variable_id] = vi;
+				if (type.category == Type::Category::PRIMITIVE) current_BDS.frame_size_stack.top() += type.size;
+				if (type.category == Type::Category::CLASS) current_BDS.frame_size_stack.top() += sizeof(MalachiteCore::Pointer);
 				//if (type.category == Type::Category::ALIAS) frame_size_stack.top();
 				//{
 				//	//letter. Alias its common pseudoname of some type, if parent type is primitive -> push type.size, if class -> push pointer size
@@ -74,15 +59,15 @@ namespace Malachite
 		if (pd.op_code == PseudoOpCode::ScopeStart)
 		{
 			result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_CREATE_FRAME));	//Creates frame in the vm data stack
-			frame_size_stack.push(0);
-			current_depth++;
+			current_BDS.frame_size_stack.push(0);
+			current_BDS.current_depth++;
 		}
 		if (pd.op_code == PseudoOpCode::ScopeEnd)
 		{
 			result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_DESTROY_FRAME));	//Destroes frame in the vm data stack
-			frame_size_stack.pop();
-			regsTable.Clear();	//Clears register after scope's exit
-			current_depth--;
+			current_BDS.frame_size_stack.pop();
+			current_BDS.regsTable.Clear();	//Clears register after scope's exit
+			current_BDS.current_depth--;
 		}
 		//Loading/Storing
 
@@ -256,37 +241,37 @@ namespace Malachite
 	std::vector<MalachiteCore::VMCommand> Malachite::ByteDecoder::PseudoToByte(std::pair<std::shared_ptr<CompilationState>, std::vector<PseudoCommand>> state)
 	{
 		ClearState();
-		current_state = state.first;
+		current_BDS.current_state = state.first;
 		std::vector<PseudoCommand>& code = state.second;
 
 		std::vector<MalachiteCore::VMCommand> result;
-		current_commands = &result;
+		current_BDS.current_commands = &result;
 		try 
 		{
-			for (; ip < code.size(); ip++)
+			for (; current_BDS.ip < code.size(); current_BDS.ip++)
 			{
-				auto commands = HandleCommand(code, ip);
+				auto commands = HandleCommand(code, current_BDS.ip);
 				result.insert(result.end(), commands.begin(), commands.end());
 			}
 		}
 		catch (std::runtime_error& e) {
-			Logger::Get().PrintLogicError(e.what(), ip);
+			Logger::Get().PrintLogicError(e.what(), current_BDS.ip);
 		}
 		catch (std::logic_error& e) {
-			Logger::Get().PrintTypeError(e.what(), ip);
+			Logger::Get().PrintTypeError(e.what(), current_BDS.ip);
 		}
 		catch (std::exception& e) {
-			Logger::Get().PrintLogicError("Unexpected error: " + std::string(e.what()), ip);
+			Logger::Get().PrintLogicError("Unexpected error: " + std::string(e.what()), current_BDS.ip);
 		}
 
-		if (waiting_jumps.size() > 0) 
+		if (current_BDS.waiting_jumps.size() > 0)
 		{
-			Logger::Get().PrintLogicError("There are unhandled jumps. Maybe them label-destination doenst exist? List of jumps:", ip);
-			for (auto& p : waiting_jumps) 
+			Logger::Get().PrintLogicError("There are unhandled jumps. Maybe them label-destination doenst exist? List of jumps:", current_BDS.ip);
+			for (auto& p : current_BDS.waiting_jumps)
 			{
 				for (auto& d : p.second) 
 				{
-					Logger::Get().PrintLogicError("LabelID: " + std::to_string(p.first) + "| Jump pseudo ip: " + std::to_string(d.first) + "| Jump byte ip: " + std::to_string(d.second), ip);
+					Logger::Get().PrintLogicError("LabelID: " + std::to_string(p.first) + "| Jump pseudo ip: " + std::to_string(d.first) + "| Jump byte ip: " + std::to_string(d.second), current_BDS.ip);
 				}
 			}
 		}

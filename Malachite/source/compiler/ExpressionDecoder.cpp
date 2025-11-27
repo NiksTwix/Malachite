@@ -4,46 +4,6 @@
 
 namespace Malachite 
 {
-	Type* ExpressionDecoder::FindType(std::shared_ptr<CompilationState> state, const std::string& type_name)
-	{
-		size_t current_depth = state->GetSpacesDepth();
-		for (; current_depth > 0; current_depth--) 
-		{
-			auto space = state->GetSpace(current_depth);
-			if (space && space->types_table.IsExists(type_name))
-			{
-				return &space->types_table[type_name];
-			}
-		}
-		return nullptr;
-	}
-	Variable* ExpressionDecoder::FindVariable(std::shared_ptr<CompilationState> state, const std::string& variable_name)
-	{
-		size_t current_depth = state->GetSpacesDepth();
-		for (; current_depth > 0; current_depth--)
-		{ 
-			auto space = state->GetSpace(current_depth);
-			if (space && space->variables_table.IsExists(variable_name))
-			{
-				return &space->variables_table[variable_name];
-			}
-
-		}
-		return nullptr;
-	}
-	const std::vector<functionID>* ExpressionDecoder::FindFunctions(std::shared_ptr<CompilationState> state, const std::string& function_name)
-	{
-		size_t current_depth = state->GetSpacesDepth();
-		for (; current_depth > 0; current_depth--)
-		{
-			auto space = state->GetSpace(current_depth);
-			if (space && space->functions_table.IsExists(function_name))
-			{
-				return &space->functions_table[function_name];
-			}
-		}
-		return nullptr;
-	}
 
 	std::vector<TokensGroup> ExpressionDecoder::ToPostfixForm(const std::vector<Token>& original)
 	{
@@ -140,7 +100,7 @@ namespace Malachite
 		if (postfix.size() == 1) { Logger::Get().PrintLogicError("Invalid function call.", postfix[0].token.line);  return std::vector<PseudoCommand>(); }
 		std::string func_name = postfix[1].token.value.strVal;
 		//Functions search
-		auto* functions = FindFunctions(state, func_name);
+		auto* functions = state->FindFunctions(func_name);
 		if (!functions)
 		{
 			Logger::Get().PrintLogicError("Functions overloadings with name \"" + func_name + "\" dont exist.", postfix[1].token.line);
@@ -193,7 +153,7 @@ namespace Malachite
 				if (t.type == TokenType::IDENTIFIER)
 				{
 					//Add type converting later
-					if (auto* variable = FindVariable(state, t.value.strVal); variable)
+					if (auto* variable = state->FindVariable(t.value.strVal); variable)
 					{
 						result.push_back(PseudoCommand(PseudoOpCode::Load, { {PseudoCodeInfo::Get().variableID_name, variable->variable_id} }));
 					}
@@ -279,7 +239,7 @@ namespace Malachite
 				return HandleVariableDeclaration(left, i, is_const, state);
 			}
 			// Объявление кастомной переменной: "Vector x"
-			else if ((t.type == TokenType::IDENTIFIER && FindType(state,t.value.strVal)) && i + 1 < left.size() &&
+			else if ((t.type == TokenType::IDENTIFIER && state->FindType(t.value.strVal)) && i + 1 < left.size() &&
 				left[i + 1].type == TokenType::IDENTIFIER)
 			{
 				return HandleVariableDeclaration(left, i, is_const, state); 
@@ -299,7 +259,7 @@ namespace Malachite
 		const Token& name_token = left[type_index + 1];
 
 		// Проверка типа
-		auto* type = FindType(state, type_token.value.strVal);
+		auto* type = state->FindType(type_token.value.strVal);
 		if (!type) {
 			Logger::Get().PrintTypeError("Type \"" + type_token.value.strVal + "\" doesn't exist", type_token.line);
 			return result;
@@ -333,7 +293,7 @@ namespace Malachite
 		std::vector<PseudoCommand> result;
 
 		// Проверка существования переменной
-		auto* variable = FindVariable(state, var_name.value.strVal);
+		auto* variable = state->FindVariable(var_name.value.strVal);
 		if (!variable) {
 			Logger::Get().PrintTypeError("Variable \"" + var_name.value.strVal + "\" is not declared", var_name.line); 
 			return result;

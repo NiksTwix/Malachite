@@ -15,6 +15,9 @@ namespace Malachite
 		std::vector<PseudoCommand> HandleBasicSyntax(const ASTNode& node);	//Checks node header content and choouses special method for current node
 
 		std::vector<PseudoCommand> ParseConditionBlock(const ASTNode& node);	//if elif else
+
+		std::vector<PseudoCommand> ParseOpCodeBlock(const ASTNode& node);	//op_code
+
 		std::vector<PseudoCommand> ParseWhileBlock(const ASTNode& node);		//while cycle
 		std::vector<PseudoCommand> ParseForBlock(const ASTNode& node);			//for cycle
 

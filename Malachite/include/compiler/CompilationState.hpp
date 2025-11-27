@@ -293,6 +293,45 @@ namespace Malachite
 		bool HasSpaces() { return spaces.size() > 0; }
 		size_t GetSpacesDepth() { return spaces.size(); }
 
+		Type* FindType(const std::string& type_name)
+		{
+			size_t current_depth = GetSpacesDepth();
+			for (; current_depth > 0; current_depth--)
+			{
+				auto space = GetSpace(current_depth);
+				if (space && space->types_table.IsExists(type_name))
+				{
+					return &space->types_table[type_name];
+				}
+			}
+			return nullptr;
+		}
+		Variable* FindVariable(const std::string& variable_name)
+		{
+			size_t current_depth = GetSpacesDepth();
+			for (; current_depth > 0; current_depth--)
+			{
+				auto space = GetSpace(current_depth);
+				if (space && space->variables_table.IsExists(variable_name))
+				{
+					return &space->variables_table[variable_name];
+				}
 
+			}
+			return nullptr;
+		}
+		const std::vector<functionID>* FindFunctions( const std::string& function_name)
+		{
+			size_t current_depth = GetSpacesDepth();
+			for (; current_depth > 0; current_depth--)
+			{
+				auto space = GetSpace(current_depth);
+				if (space && space->functions_table.IsExists(function_name))
+				{
+					return &space->functions_table[function_name];
+				}
+			}
+			return nullptr;
+		}
 	};
 }

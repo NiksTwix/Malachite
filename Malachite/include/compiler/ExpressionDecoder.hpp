@@ -37,12 +37,6 @@ namespace Malachite
 	class ExpressionDecoder 
 	{
 	private:
-
-
-		Type* FindType(std::shared_ptr<CompilationState> state, const std::string& type_name);
-		Variable* FindVariable(std::shared_ptr<CompilationState> state, const std::string& variable_name);
-		const std::vector<functionID>* FindFunctions(std::shared_ptr<CompilationState> state, const std::string& function_name);
-		
 		std::vector<PseudoCommand>	ProcessLeftSide(const std::vector<Token>& left,std::shared_ptr<CompilationState> state);
 		std::vector<PseudoCommand>	HandleVariableDeclaration(const std::vector<Token>& left, size_t type_index, bool is_const, std::shared_ptr<CompilationState> state);
 		std::vector<PseudoCommand>	HandleVariableAssignment(const Token& var_name, bool is_const, std::shared_ptr<CompilationState> state);

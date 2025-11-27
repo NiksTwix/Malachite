@@ -100,24 +100,29 @@ namespace Malachite
         uint64_t stack_offset = 0;  
     }; 
 
+    struct ByteDecodingState 
+    {
+        uint64_t ip = 0;
+        RegistersTable regsTable{};
+        std::shared_ptr<CompilationState> current_state{};
+        int64_t current_depth = StartDepth; //Program starts by ScopeStart and ends by ScopeEnd, but we need start depth = 0
+        std::stack<ValueFrame> value_stack{};         //Stack for operations
+        std::stack<uint64_t> frame_size_stack{};    //When we create variable add it size to frame_size stack;
+
+        std::unordered_map<variableID, VariableInfo> variable_depth{}; //variableID and info about variable. If we meet DECLARE_VARIABLE -> add writting <ID, Info>
+
+        std::unordered_map<uint64_t, uint64_t>  labels{}; //ID, IP
+        std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, uint64_t>>> waiting_jumps{};  //Label ID, IP (Pseudo,Byte) of jmp commands
+
+        std::vector<MalachiteCore::VMCommand>* current_commands = nullptr;
+    };
+
+
 	class ByteDecoder		//Pseudo->Byte code
 	{
     private:
-        //global_state
-        uint64_t ip = 0;
-        RegistersTable regsTable;
-        std::shared_ptr<CompilationState> current_state;
-        int64_t current_depth = StartDepth; //Program starts by ScopeStart and ends by ScopeEnd, but we need start depth = 0
-        std::stack<ValueFrame> value_stack;         //Stack for operations
-        std::stack<uint64_t> frame_size_stack;    //When we create variable add it size to frame_size stack;
 
-        std::unordered_map<variableID, VariableInfo> variable_depth; //variableID and info about variable. If we meet DECLARE_VARIABLE -> add writting <ID, Info>
-
-        std::unordered_map<uint64_t, uint64_t>  labels; //ID, IP
-        std::unordered_map<uint64_t, std::vector<std::pair<uint64_t,uint64_t>>> waiting_jumps;  //Label ID, IP (Pseudo,Byte) of jmp commands
-
-        std::vector<MalachiteCore::VMCommand>* current_commands;
-
+        ByteDecodingState current_BDS;
         //Methods---------------------
         std::vector<MalachiteCore::VMCommand> HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
         std::vector<MalachiteCore::VMCommand> HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
