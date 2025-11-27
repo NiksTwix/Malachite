@@ -7,7 +7,10 @@ namespace Malachite
 		current_depth = StartDepth;
 		regsTable.Clear();
 		current_state = nullptr;
+		current_commands = nullptr;
 		variable_depth.clear();
+		waiting_jumps.clear();
+		labels.clear();
 		ip = 0;
 		while (!value_stack.empty())
 		{
@@ -29,7 +32,7 @@ namespace Malachite
 		{
 			case PseudoOpCode::DeclareVariable:
 			{
-				Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoFieldNames::Get().variableID_name].uintVal);
+				Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
 				Type& type = current_state->types_global_table.at(var.type_id);
 				if (type.size == 0)
 				{
@@ -100,13 +103,22 @@ namespace Malachite
 			auto result1 = HandleArithmeticCommand(cmds, ip);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
+		//Logic
+		if (pd.op_code > PseudoOpCode::START_SECTION_LOGIC_OPS && pd.op_code < PseudoOpCode::END_SECTION_LOGIC_OPS)
+		{
+			auto result1 = HandleLogicCommand(cmds, ip);
+			result.insert(result.end(), result1.begin(), result1.end());
+		}
+		//Arithmetic
+		if (pd.op_code > PseudoOpCode::START_SECTION_CONTROL_FLOW_OPS && pd.op_code < PseudoOpCode::END_SECTION_CONTROL_FLOW_OPS)
+		{
+			auto result1 = HandleControlFlowCommand(cmds, ip);
+			result.insert(result.end(), result1.begin(), result1.end());
+		}
 		return result;
 	}
 
-	MalachiteCore::VMCommand ByteDecoder::GetVMTypeConvertionCommand(
-		Type::VMAnalog first, uint64_t first_register,
-		Type::VMAnalog second, uint64_t second_register,
-		uint64_t& converted_register, Type::VMAnalog& result_type)
+	MalachiteCore::VMCommand ByteDecoder::GetVMTypeConvertionCommand(Type::VMAnalog first, uint64_t first_register,Type::VMAnalog second, uint64_t second_register,uint64_t& converted_register, Type::VMAnalog& result_type)
 	{
 		// Определяем целевой тип (более точный)
 		Type::VMAnalog target_type = (first > second) ? first : second;
@@ -207,14 +219,48 @@ namespace Malachite
 		return MalachiteCore::OpCode::OP_NOP;
 	}
 
+	MalachiteCore::OpCode ByteDecoder::GetVMLogicCommand(PseudoOpCode code, Type::VMAnalog type)
+	{
+		switch (code)
+		{
+		case PseudoOpCode::And:
+			return MalachiteCore::OpCode::OP_AND_RRR;
+		case PseudoOpCode::Or:
+			return MalachiteCore::OpCode::OP_OR_RRR;
+		case PseudoOpCode::Not:
+			return MalachiteCore::OpCode::OP_NOT_RR;
+		case PseudoOpCode::BitOr:
+			return MalachiteCore::OpCode::OP_BIT_OR_RRR;
+		case PseudoOpCode::BitNot:
+			return MalachiteCore::OpCode::OP_BIT_NOT_RR;
+		case PseudoOpCode::BitAnd:
+			return MalachiteCore::OpCode::OP_BIT_AND_RRR;
+		case PseudoOpCode::BitOffsetLeft:
+			return MalachiteCore::OpCode::OP_BIT_OFFSET_LEFT_RRR;
+		case PseudoOpCode::BitOffsetRight:
+			return MalachiteCore::OpCode::OP_BIT_OFFSET_RIGHT_RRR;
+		case PseudoOpCode::Equal:
+		case PseudoOpCode::NotEqual:
+		case PseudoOpCode::Greater:
+		case PseudoOpCode::Less:
+		case PseudoOpCode::GreaterEqual:
+		case PseudoOpCode::LessEqual:
+			if (type == Type::VMAnalog::DOUBLE)return MalachiteCore::OpCode::OP_DCMP_RR;
+			return MalachiteCore::OpCode::OP_CMP_RR;
+		default:
+			break;
+		}
+		return MalachiteCore::OpCode::OP_NOP;
+	}
+
 	std::vector<MalachiteCore::VMCommand> Malachite::ByteDecoder::PseudoToByte(std::pair<std::shared_ptr<CompilationState>, std::vector<PseudoCommand>> state)
 	{
 		ClearState();
 		current_state = state.first;
-		frame_size_stack.push(0);
 		std::vector<PseudoCommand>& code = state.second;
 
 		std::vector<MalachiteCore::VMCommand> result;
+		current_commands = &result;
 		try 
 		{
 			for (; ip < code.size(); ip++)
@@ -232,6 +278,19 @@ namespace Malachite
 		catch (std::exception& e) {
 			Logger::Get().PrintLogicError("Unexpected error: " + std::string(e.what()), ip);
 		}
+
+		if (waiting_jumps.size() > 0) 
+		{
+			Logger::Get().PrintLogicError("There are unhandled jumps. Maybe them label-destination doenst exist? List of jumps:", ip);
+			for (auto& p : waiting_jumps) 
+			{
+				for (auto& d : p.second) 
+				{
+					Logger::Get().PrintLogicError("LabelID: " + std::to_string(p.first) + "| Jump pseudo ip: " + std::to_string(d.first) + "| Jump byte ip: " + std::to_string(d.second), ip);
+				}
+			}
+		}
+
 		return result;
 	}
 }

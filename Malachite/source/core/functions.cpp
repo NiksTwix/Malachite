@@ -8,15 +8,15 @@ namespace MalachiteCore
 		if (commands == nullptr) return VMError::VMCS_INVALID;
 		if (commands_size == 0) return VMError::VMCS_INVALID;
 
-		if (!(state->flags & STOPPED_FLAG))state->ip = 0;
-		else state->flags &= ~STOPPED_FLAG;
+		if (!(state->flags & FLAG::STOPPED_FLAG))state->ip = 0;
+		else state->flags &= ~FLAG::STOPPED_FLAG;
 		size_t command_size = sizeof(VMCommand);
 
 		VMError result = VMError::NO_ERROR;
 
-		for (; state->ip < commands_size;) 
+		while (state->ip < commands_size) 
 		{
-			state->flags &= ~JUMPED_FLAG;
+			state->flags &= ~FLAG::JUMPED_FLAG;
 			VMCommand* command = commands + state->ip;
 
 			if (command->operation == OpCode::OP_NOP)
@@ -51,7 +51,7 @@ namespace MalachiteCore
 			}
 			if (result == VMError::EXIT)
 			{
-				state->flags |= STOPPED_FLAG;
+				state->flags |= FLAG::STOPPED_FLAG;
 				return result;
 			}
 			if (result != VMError::NO_ERROR) 
@@ -59,7 +59,7 @@ namespace MalachiteCore
 				state->error_stack.push(ErrorFrame(result, state->ip));
 				return result;
 			}
-			if (state->flags & JUMPED_FLAG) continue;
+			if (state->flags & FLAG::JUMPED_FLAG) continue;
 			state->ip++;
 		}
 

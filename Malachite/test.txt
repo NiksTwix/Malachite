@@ -29,20 +29,21 @@ while (condition)
   //code
 }
 
-func function1(type arg1,type arg2) -> returned
+func function1(type arg1,type arg2) -> returned_type
 {
-  return 
+  return value
 }
 
 op_code      // from elscript
 {
   //asm _style_code
+  //registers RA RB RC RD RE RF RG - 7 registers? but its just global variables
 }
 
 //In the future---------------------------------------------------
 
 
-user_type char: int 
+alignas_type char: int 
 { //analog "using" from c++ but without implicit conversion
     constructor from_int(int x) -> char { ... }
 }
@@ -53,15 +54,15 @@ call_native("player_script","damage",20,20,20....)
 //function's blocks (semi function's inheritance)
 func LengthSquared(type arg1,type arg2) -> returned_type    
 {
-  block "init"
+  block init
   //initing
-  block "calculation"
+  block calculation // identificator
   //length square calculate
   return result
 }
-func Length(type arg1,type arg2) -> returned : LengthSquared
+func Length(type arg1,type arg2) -> returned_type : LengthSquared
 {
-  block "calculation"  //overwriting
+  block calculation  //overwriting
   //sqrt(x)    
   return result
 }
@@ -72,4 +73,11 @@ class Vector
   int field1;
   int field2;
   int field3;
+}
+
+In the deep future
+
+class Vector1 : Vector // public and protected fields saves on new acception level
+{
+  property(get:public, set:protected) int field4;
 }

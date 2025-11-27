@@ -152,7 +152,7 @@ namespace Malachite
 			{
 				if (cn_stack.size() <= 1)
 				{
-					Logger::Get().PrintSyntaxError("There are extra ones }.", t.line);
+					Logger::Get().PrintSyntaxError("There are extra ones '}'.", t.line);
 					return parent;
 				}
 				///Конец области видимости переменных
@@ -190,7 +190,7 @@ namespace Malachite
 			}
 			if (current_depth < 0)
 			{
-				Logger::Get().PrintSyntaxError("There are extra ones } .", t.line);
+				Logger::Get().PrintSyntaxError("There are extra ones '}'.", t.line);
 				return parent;
 			}
 			command_tokens.push_back(t);
@@ -208,7 +208,7 @@ namespace Malachite
 
 		if (current_depth > 0)
 		{
-			Logger::Get().PrintSyntaxError("Expected } .", last_line);
+			Logger::Get().PrintSyntaxError("Expected '}'.", last_line);
 			return parent;
 		}
 

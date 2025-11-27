@@ -174,7 +174,7 @@ namespace Malachite
 			Logger::Get().PrintLogicError("Function's overloading with name \"" + func_name + "\" doesnt exist.", postfix[1].token.line);
 			return std::vector<PseudoCommand>();
 		}
-		result.push_back(PseudoCommand(PseudoOpCode::Call, { {PseudoFieldNames::Get().functionID_name, valid_functions[0]} }));
+		result.push_back(PseudoCommand(PseudoOpCode::Call, { {PseudoCodeInfo::Get().functionID_name, valid_functions[0]} }));
 		return result;
 	}
 	std::vector<PseudoCommand> ExpressionDecoder::PTP_HandleExpression(const std::vector<TokensGroup>& postfix, std::shared_ptr<CompilationState> state)
@@ -195,7 +195,7 @@ namespace Malachite
 					//Add type converting later
 					if (auto* variable = FindVariable(state, t.value.strVal); variable)
 					{
-						result.push_back(PseudoCommand(PseudoOpCode::Load, { {PseudoFieldNames::Get().variableID_name, variable->variable_id} }));
+						result.push_back(PseudoCommand(PseudoOpCode::Load, { {PseudoCodeInfo::Get().variableID_name, variable->variable_id} }));
 					}
 					else
 					{
@@ -204,7 +204,7 @@ namespace Malachite
 					}
 				}
 				if (t.type == TokenType::OPERATOR) result.push_back(PseudoCommand(SyntaxInfo::GetOperatorPseudoCode(t)));
-				if (t.type == TokenType::LITERAL) result.push_back(PseudoCommand(PseudoOpCode::Immediate, { {PseudoFieldNames::Get().valueID_name, t.value } }));
+				if (t.type == TokenType::LITERAL) result.push_back(PseudoCommand(PseudoOpCode::Immediate, { {PseudoCodeInfo::Get().valueID_name, t.value } }));
 			}
 			else // Complex
 			{
@@ -257,6 +257,7 @@ namespace Malachite
 
 		return result;
 	}
+	
 	std::vector<PseudoCommand> ExpressionDecoder::ProcessLeftSide(const std::vector<Token>& left, std::shared_ptr<CompilationState> state)
 	{
 		std::vector<PseudoCommand> result;
@@ -316,13 +317,13 @@ namespace Malachite
 
 		// Генерируем команду объявления
 		PseudoCommand declare_cmd(PseudoOpCode::DeclareVariable);
-		declare_cmd.parameters[PseudoFieldNames::Get().variableID_name] = var.variable_id;
-		declare_cmd.parameters[PseudoFieldNames::Get().typeID_name] = type->type_id;
+		declare_cmd.parameters[PseudoCodeInfo::Get().variableID_name] = var.variable_id;
+		declare_cmd.parameters[PseudoCodeInfo::Get().typeID_name] = type->type_id;
 		result.push_back(declare_cmd);
 
 		// Генерируем команду сохранения (значение уже в стеке от правой части)
 		PseudoCommand store_cmd(PseudoOpCode::Store);		//или LOAD ARITHMETIC_OPER STORE 
-		store_cmd.parameters[PseudoFieldNames::Get().variableID_name] = var.variable_id;
+		store_cmd.parameters[PseudoCodeInfo::Get().variableID_name] = var.variable_id;
 		result.push_back(store_cmd);
 
 		return result;
@@ -346,7 +347,7 @@ namespace Malachite
 		}
 
 		PseudoCommand store_cmd(PseudoOpCode::Store);
-		store_cmd.parameters[PseudoFieldNames::Get().variableID_name] = variable->variable_id;
+		store_cmd.parameters[PseudoCodeInfo::Get().variableID_name] = variable->variable_id;
 		result.push_back(store_cmd);
 
 		return result;
@@ -374,28 +375,31 @@ namespace Malachite
 
 		return result;
 	}
-
-	std::vector<PseudoCommand> Malachite::ExpressionDecoder::DecodeExpression(const ASTNode& node, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::DecodeExpression(const std::vector<Token>& tokens, std::shared_ptr<CompilationState> state)
 	{
 		std::vector<PseudoCommand> result;
 
 		std::vector<Token> temp_tokens;
-		for (size_t i = 0; i < node.tokens.size(); i++) 
+		for (size_t i = 0; i < tokens.size(); i++)
 		{
-			const Token& t = node.tokens[i];
-			if (t.type == TokenType::COMPILATION_LABEL) 
+			const Token& t = tokens[i];
+			if (t.type == TokenType::COMPILATION_LABEL)
 			{
 				switch ((CompilationLabel)t.value.uintVal)
 				{
 				case CompilationLabel::SCOPE_START:
 					state->PushSpace();
+					result.push_back(PseudoCommand(PseudoOpCode::ScopeStart));
+					break;
 				case CompilationLabel::SCOPE_END:
-					if (!state->HasSpaces()) 
+					if (!state->HasSpaces())
 					{
 						Logger::Get().PrintLogicError("Unexpected scope escape of variables", t.line);
 						return result;
 					}
 					state->PopSpace();
+					result.push_back(PseudoCommand(PseudoOpCode::ScopeEnd));
+					break;
 				default:
 					break;
 				}
@@ -404,20 +408,24 @@ namespace Malachite
 
 			if (t.type == TokenType::OPERATOR && SyntaxInfo::GetOperationPriority(t) == -1)
 			{
-				std::vector<Token> right = StringOperations::TrimVector<Token>(node.tokens, i+1,node.tokens.size() - 1);
+				std::vector<Token> right = StringOperations::TrimVector<Token>(tokens, i + 1, tokens.size() - 1);
 				result = DecodeAssignExpression(temp_tokens, right, state);
 				temp_tokens.clear();
 				break;
 			}
-			
+
 			temp_tokens.push_back(t);
 		}
-		if (!temp_tokens.empty()) 
+		if (!temp_tokens.empty())
 		{
 			std::vector<PseudoCommand> commands = ProcessRightSide(temp_tokens, state);
 			result.insert(result.end(), commands.begin(), commands.end());
 		}
 		return result;
+	}
+	std::vector<PseudoCommand> Malachite::ExpressionDecoder::DecodeExpression(const ASTNode& node, std::shared_ptr<CompilationState> state)
+	{
+		return DecodeExpression(node.tokens, state);
 	}
 }
 

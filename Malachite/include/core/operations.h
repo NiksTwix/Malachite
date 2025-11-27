@@ -4,6 +4,16 @@
 #include <iostream>
 namespace MalachiteCore 
 {
+    enum FLAG : uint32_t
+    {
+        EQUAL_FLAG = 1 << 0,
+        NOT_EQUAL_FLAG = 1 << 1,
+        GREATER_FLAG = 1 << 2,
+        LESS_FLAG = 1 << 3,
+        JUMPED_FLAG = 1 << 4,
+        STOPPED_FLAG = 1 << 5,
+    };
+
     enum OpCode : uint16_t  //little-endian!
     {
         OP_NOP = 0,
@@ -31,13 +41,16 @@ namespace MalachiteCore
         OP_AND_RRR = 31,
         OP_OR_RRR,
         OP_NOT_RR,
-        OP_CMP_RR,
-        OP_DCMP_RR,     //For double with nan checking
         OP_BIT_OR_RRR,
         OP_BIT_NOT_RR,
         OP_BIT_AND_RRR,
         OP_BIT_OFFSET_LEFT_RRR,
         OP_BIT_OFFSET_RIGHT_RRR,
+
+        OP_CMP_RR,          //destination - null, source0 - first, source1 - second
+        OP_DCMP_RR,     //destination - null, source0 - first, source1 - second; For double with nan checking
+        OP_GET_FLAG,    //destination - register, source0 - flag type (check FLAG enum)
+
         //OP_GT
         //OP_LS
         // ... 60
@@ -64,14 +77,10 @@ namespace MalachiteCore
         OP_ALLOCATE_MEMORY,
         OP_FREE_MEMORY,
 
-        // Control flow [91-120]  
+        // Control flow [91-120]  destination = where
         OP_JMP = 91,
-        OP_JE,      //Jump if equal flag is setted 
-        OP_JNE,     //Jump if equal flag isnt setted 
-        OP_JL,   //Jump if less flag is setted 
-        OP_JG,  //Jump if greater flag is setted 
-        OP_JEL,   //Jump if equal or less flags are setted 
-        OP_JEG,  //Jump if equal or greater flags are setted 
+        OP_JMP_CV,      //CV- Condition Valid - destination[where], source0[condition register]
+        OP_JMP_CNV,     //CNV - Condition Not Valid - destination[where], source0[condition register]
         OP_CALL,
         OP_RET,
         OP_HALT,

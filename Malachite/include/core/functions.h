@@ -402,24 +402,27 @@ namespace MalachiteCore
 			break;
 		}
 		case OpCode::OP_CMP_RR:
+		{
 			//Reset logic flags state
-			state->flags &= ~(EQUAL_FLAG | LESS_FLAG | GREATER_FLAG);
+			state->flags &= ~(FLAG::EQUAL_FLAG | FLAG::LESS_FLAG | FLAG::GREATER_FLAG);
 
 			if (state->registers[command->source0].i == state->registers[command->source1].i) {
-				state->flags |= EQUAL_FLAG;
+				state->flags |= FLAG::EQUAL_FLAG;
 			}
 			else if (state->registers[command->source0].i > state->registers[command->source1].i)
 			{
-				state->flags |= GREATER_FLAG;
+				state->flags |= FLAG::GREATER_FLAG | NOT_EQUAL_FLAG;
 			}
 			else // < CASE
 			{
-				state->flags |= LESS_FLAG;
+				state->flags |= FLAG::LESS_FLAG | NOT_EQUAL_FLAG;
 			}
 			break;
+		}
 		case OpCode::OP_DCMP_RR:
+		{
 			//Reset logic flags state
-			state->flags &= ~(EQUAL_FLAG | LESS_FLAG | GREATER_FLAG);
+			state->flags &= ~(FLAG::EQUAL_FLAG | FLAG::NOT_EQUAL_FLAG | FLAG::LESS_FLAG | FLAG::GREATER_FLAG);
 
 			auto is_nan = [](double value) -> bool {
 				uint64_t bits = *reinterpret_cast<const uint64_t*>(&value);
@@ -432,18 +435,26 @@ namespace MalachiteCore
 				return VMError::NAN_FLOAT_VALUE;
 			}
 			if (state->registers[command->source0].d == state->registers[command->source1].d) {
-				state->flags |= EQUAL_FLAG;
+				state->flags |= FLAG::EQUAL_FLAG;
 			}
 			else if (state->registers[command->source0].d > state->registers[command->source1].d)
 			{
-				state->flags |= GREATER_FLAG;
+				state->flags |= FLAG::GREATER_FLAG | NOT_EQUAL_FLAG;
 			}
 			else // < CASE
 			{
-				state->flags |= LESS_FLAG;
+				state->flags |= FLAG::LESS_FLAG | NOT_EQUAL_FLAG;
+			}
+			break;
+		}	
+		case OpCode::OP_GET_FLAG: //destination - register, source0 - flag type (check FLAG enum)
+			{
+				FLAG flag = (FLAG)command->source0;	// uint64_t -> uint32_t
+				state->registers[command->destination].u = state->flags & flag;	//Flag combinations: EQUAL | GREATER
 			}
 			break;
 		}
+		
 		return VMError::NO_ERROR;
 	}
 
@@ -453,46 +464,19 @@ namespace MalachiteCore
 		{
 		case OpCode::OP_JMP:
 			state->ip = command->destination;
-			state->flags |= JUMPED_FLAG;
+			state->flags |= FLAG::JUMPED_FLAG;
 			break;
 
-		case OpCode::OP_JE:
-			if (state->flags & EQUAL_FLAG) {
+		case OpCode::OP_JMP_CV:
+			if (state->registers[command->source0].u != 0) {
 				state->ip = command->destination;
-				state->flags |= JUMPED_FLAG;
+				state->flags |= FLAG::JUMPED_FLAG;
 			}
 			break;
-
-		case OpCode::OP_JNE:
-			if (!(state->flags & EQUAL_FLAG)) {  
+		case OpCode::OP_JMP_CNV:
+			if (state->registers[command->source0].u == 0) {
 				state->ip = command->destination;
-				state->flags |= JUMPED_FLAG;
-			}
-			break;
-		case OpCode::OP_JL:
-			if (state->flags & LESS_FLAG) {
-				state->ip = command->destination;
-				state->flags |= JUMPED_FLAG;
-			}
-			break;
-
-		case OpCode::OP_JG:
-			if (state->flags & GREATER_FLAG) {
-				state->ip = command->destination;
-				state->flags |= JUMPED_FLAG;
-			}
-			break;
-		case OpCode::OP_JEL:
-			if (state->flags & LESS_FLAG || state->flags & EQUAL_FLAG) {
-				state->ip = command->destination;
-				state->flags |= JUMPED_FLAG;
-			}
-			break;
-
-		case OpCode::OP_JEG:
-			if (state->flags & GREATER_FLAG || state->flags & EQUAL_FLAG) {
-				state->ip = command->destination;
-				state->flags |= JUMPED_FLAG;
+				state->flags |= FLAG::JUMPED_FLAG;
 			}
 			break;
 		case OpCode::OP_CALL:
@@ -506,7 +490,7 @@ namespace MalachiteCore
 
 			// Переходим к функции
 			state->ip = command->destination;
-			state->flags |= JUMPED_FLAG;
+			state->flags |= FLAG::JUMPED_FLAG;
 			break;
 
 		case OpCode::OP_RET:
@@ -517,7 +501,7 @@ namespace MalachiteCore
 
 			CallFrame frame = state->call_stack.pop();
 			state->ip = frame.return_ip;
-			state->flags |= JUMPED_FLAG;
+			state->flags |= FLAG::JUMPED_FLAG;		//WARNING Maybe its not useful here, must be tested later 
 			break;
 		}
 		case OpCode::OP_HALT:

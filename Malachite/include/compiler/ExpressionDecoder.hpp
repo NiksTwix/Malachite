@@ -57,6 +57,7 @@ namespace Malachite
 	public:
 		std::vector<TokensGroup>	ToPostfixForm(const std::vector<Token>& original);
 		std::vector<PseudoCommand>	PostfixToPseudo(const std::vector<TokensGroup>& postfix, std::shared_ptr<CompilationState> state);
+		std::vector<PseudoCommand>	DecodeExpression(const std::vector<Token>& tokens, std::shared_ptr<CompilationState> state);
 		std::vector<PseudoCommand>	DecodeExpression(const ASTNode& node, std::shared_ptr<CompilationState> state);
 
 	};

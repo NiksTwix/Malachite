@@ -10,30 +10,20 @@ using namespace MalachiteCore;
 
 int main()
 {
-	
-
-
-	//test
-	//ыuint64_t value = 't';
-	//ыvalue <<= 8;
-	//ыvalue |= 's';
-	//ыvalue <<= 8;
-	//ыvalue |= 'e';
-	//ыvalue <<= 8;
-	//ыvalue |= 't';
-	//ы
-	//ыstd::vector<VMCommand> commands =
-	//ы{
-	//ы	VMCommand(OpCode::OP_MOV_RI_INT,0,Register(value)),
-	//ы	VMCommand(OpCode::OP_MOV_RI_INT,2,Register((uint64_t)4)),
-	//ы	VMCommand(OpCode::OP_STORE_MR,0,0,4),
-	//ы	VMCommand(OpCode::OP_SYSTEM_CALL,SysCall::PRINT_CHAR_ARRAY,1,2)
-	//ы};
-	//ыexecute(&state, commands.data(), 4);
-
 	std::string code = R"CODE(
-		int y = 1000
-		int x = 100 * 150.5 + 60 - y / 10
+	float x = 2
+	if (x >= 120.0 || x == 90.0)
+	{
+		x = 2200
+	}
+	else: x = 10000
+	if (x >= 10000)
+	{
+		x = 2300
+	}
+	float y = 1;
+	y = x
+	
 )CODE";
 
 	Malachite::Lexer lexer;
@@ -46,7 +36,14 @@ int main()
 	auto r = pbd.GeneratePseudoCode(tree);
 	Malachite::ByteDecoder bd;
 	auto r1 = bd.PseudoToByte(r);
+
+	std::cout << "MalachiteTest-------------------------------\n";
+
+	std::cout << "SourceCode-----------------------------------\n";
+	std::cout << code << "\n";
 	std::cout << "PseudoByteCode-------------------------------\n";
+	std::cout << "Size: " << r.second.size() << "\n";
+	int index = 0;
 	for (auto& t : r.second) 
 	{
 		std::string output;
@@ -55,9 +52,11 @@ int main()
 		{
 			output += t1.first + ":" + t1.second.ToString() + " ";
 		}
-		Malachite::Logger::Get().PrintInfo(output);
+		Malachite::Logger::Get().PrintInfo(output,index);
+		index++;
 	}
 	std::cout << "ByteCode-------------------------------------\n";
+	index = 0;
 	for (auto& t1 : r1)
 	{
 		std::string output;
@@ -68,7 +67,8 @@ int main()
 		output += std::to_string(t1.immediate.i) + "I|\t";
 		output += std::to_string(t1.immediate.u) + "U|\t";
 		output += std::to_string(t1.immediate.d) + "D|\t";
-		Malachite::Logger::Get().PrintInfo(output);
+		Malachite::Logger::Get().PrintInfo(output,index);
+		index++;
 	}
 	
 	VMState state;
@@ -80,11 +80,11 @@ int main()
 		std::cout << "Error:" << (uint16_t)err << " " << "IP:" << r.ip << "\n";
 	}
 	
-	
-	std::cout << "i" << " " << "u" << " " << "d" << "\n";
+	std::cout << "Registers dump-------------------------------------\n";
+	std::cout << "integer\t\t\tunsigned integer\t\t\tdouble\n";
 	for (int i = 0; i < 10; i++) 
 	{
 		auto reg = state.registers[i];
-		std::cout << reg.i << "," << reg.u << "," << reg.d << "\n";
+		std::cout << reg.i << "\t\t\t" << reg.u << "\t\t\t" << reg.d << "\n";
 	}
 }

@@ -12,11 +12,7 @@ namespace MalachiteCore {
     constexpr size_t STACK_START = MAX_MEMORY_SIZE - 1;  // Top of memory
     constexpr size_t STACK_END = STACK_START - STACK_SIZE + 1;
 
-    static constexpr uint32_t EQUAL_FLAG = 1 << 0;
-    static constexpr uint32_t GREATER_FLAG = 1 << 1;
-    static constexpr uint32_t LESS_FLAG = 1 << 2;
-    static constexpr uint32_t JUMPED_FLAG = 1 << 3;
-    static constexpr uint32_t STOPPED_FLAG = 1 << 4;     //External flag
+
 
     struct CallFrame {
         uint64_t return_ip;

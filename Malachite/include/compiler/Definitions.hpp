@@ -219,7 +219,7 @@ namespace Malachite
         //Debug
         ScopeStart,
         ScopeEnd,
-        Label,      //label label_Type label_name
+
         //Declaring
         START_SECTION_DECLARING_OPS,
         DeclareVariable,    //Declaring of variable, parameters are name and vm_type (double/int64/uint64), but creating writting in variable table with fact type (string and another)
@@ -236,6 +236,7 @@ namespace Malachite
         Negative,
         END_SECTION_ARITHMETIC_OPS,
         // Logic
+        START_SECTION_LOGIC_OPS,
         And,
         Or,
         Not,
@@ -250,13 +251,16 @@ namespace Malachite
         BitAnd,
         BitOffsetLeft,
         BitOffsetRight,
-
+        END_SECTION_LOGIC_OPS,
         //Control flow
+        START_SECTION_CONTROL_FLOW_OPS,
+        Label,      //label label_Type label_name
         Jump,
         JumpIf,
         JumpNotIf,
         Call,
-        Return
+        Return,
+        END_SECTION_CONTROL_FLOW_OPS,
         //System calls ->  welcome to op_code {...}
 
         //OOP
@@ -290,7 +294,8 @@ namespace Malachite
 				{"*=", TokenType::OPERATOR},
 				{"==", TokenType::OPERATOR},
 				{"!=", TokenType::OPERATOR},
-				{"!", TokenType::OPERATOR},
+                {"!", TokenType::OPERATOR},     // 
+				{"!u", TokenType::OPERATOR},    //  Its result of lexer
 				{">",TokenType::OPERATOR},
 				{"<",TokenType::OPERATOR},
 				{">=",TokenType::OPERATOR},
@@ -356,7 +361,7 @@ namespace Malachite
                 {"(", -1}, {")", -1},  // special cases
 
                 // Уровень 8: унарные операторы
-                {"!", 8}, {"~", 8}, {"+u", 8}, {"-u", 8},  // унарные + и -, а также битовое НЕ u-unary
+                {"!u", 8}, {"~", 8}, {"+u", 8}, {"-u", 8},  // унарные + и -, а также битовое НЕ u-unary
 
                 // Уровень 7: мультипликативные
                 {"*", 7}, {"/", 7}, {"%", 7},
@@ -403,7 +408,7 @@ namespace Malachite
                 {"-u",PseudoOpCode::Negative},
                 {"&&",PseudoOpCode::And},
                 {"||",PseudoOpCode::Or},
-                {"!",PseudoOpCode::Not},
+                {"!u",PseudoOpCode::Not},
                 {"==",PseudoOpCode::Equal},
                 {"!=",PseudoOpCode::NotEqual},
                 {"|",PseudoOpCode::BitOr},
@@ -498,6 +503,7 @@ namespace Malachite
                 {MalachiteCore::OP_NOT_RR, "OP_NOT_RR"},
                 {MalachiteCore::OP_CMP_RR, "OP_CMP_RR"},
                 {MalachiteCore::OP_DCMP_RR, "OP_DCMP_RR"},
+                {MalachiteCore::OP_GET_FLAG, "OP_GET_FLAG"},
                 {MalachiteCore::OP_BIT_OR_RRR, "OP_BIT_OR_RRR"},
                 {MalachiteCore::OP_BIT_NOT_RR, "OP_BIT_NOT_RR"},
                 {MalachiteCore::OP_BIT_AND_RRR, "OP_BIT_AND_RRR"},
@@ -526,12 +532,8 @@ namespace Malachite
 
                 // Control flow [91-120]
                 {MalachiteCore::OP_JMP, "OP_JMP"},
-                {MalachiteCore::OP_JE, "OP_JE"},
-                {MalachiteCore::OP_JNE, "OP_JNE"},
-                {MalachiteCore::OP_JL, "OP_JL"},
-                {MalachiteCore::OP_JG, "OP_JG"},
-                {MalachiteCore::OP_JEL, "OP_JEL"},
-                {MalachiteCore::OP_JEG, "OP_JEG"},
+                {MalachiteCore::OP_JMP_CV, "OP_JMP_CV"},
+                {MalachiteCore::OP_JMP_CNV, "OP_JMP_CNV"},
                 {MalachiteCore::OP_CALL, "OP_CALL"},
                 {MalachiteCore::OP_RET, "OP_RET"},
                 {MalachiteCore::OP_HALT, "OP_HALT"},
@@ -591,16 +593,25 @@ namespace Malachite
         }
     };
 
-    class PseudoFieldNames 
+    class PseudoCodeInfo 
     {
+    private:
+        uint64_t global_label_id = 1;
     public:
         const std::string variableID_name = "ID";
         const std::string typeID_name = "Type";
         const std::string functionID_name = "ID";
         const std::string valueID_name = "Value";
-        static const PseudoFieldNames& Get() 
+        const std::string labelID_name = "ID";
+        const std::string labelMark_name = "Mark";
+        uint64_t GetNewLabelID()
         {
-            static PseudoFieldNames pfn;
+            return global_label_id++;
+        }
+
+        static PseudoCodeInfo& Get() 
+        {
+            static PseudoCodeInfo pfn;
             return pfn;
         }
     };

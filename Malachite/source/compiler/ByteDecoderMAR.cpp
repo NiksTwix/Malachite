@@ -13,6 +13,12 @@ namespace Malachite
 
 		auto main_ari_handler = [&]() -> void
 			{
+				//Use secondly register of the one operand
+				if (value_stack.size() < 2)
+				{
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
+					return;
+				}
 				ValueFrame right = value_stack.top(); value_stack.pop();
 				ValueFrame left = value_stack.top(); value_stack.pop();
 
@@ -34,7 +40,7 @@ namespace Malachite
 					right.used_register
 				));
 
-				regsTable.Acquire(right.used_register);
+				regsTable.Release(right.used_register);
 				value_stack.push(ValueFrame(left.used_register, common_type));
 			};
 
@@ -42,45 +48,22 @@ namespace Malachite
 		{
 		case PseudoOpCode::Add:
 		{
-			//Use secondly register of the one operand
-			if (value_stack.size() < 2)
-			{
-				Logger::Get().PrintTypeError("Add is binary operation, but gets only one.", ip);
-				break;
-			}
 			main_ari_handler();
 			break;
 		}
 		case PseudoOpCode::Subtract:
 		{
-			//Use secondly register of the one operand
-			if (value_stack.size() < 2)
-			{
-				Logger::Get().PrintTypeError("Subtract is binary operation, but gets only one.", ip);
-				break;
-			}
 			main_ari_handler();
 			break;
 		}
 		case PseudoOpCode::Multiplication:
 		{
-			//Use secondly register of the one operand
-			if (value_stack.size() < 2)
-			{
-				Logger::Get().PrintTypeError("Multiplication is binary operation, but gets only one.", ip);
-				break;
-			}
 			main_ari_handler();
 			break;
 		}
 		case PseudoOpCode::Division:
 		{
-			//Use secondly register of the one operand
-			if (value_stack.size() < 2)
-			{
-				Logger::Get().PrintTypeError("Division is binary operation, but gets only one.", ip);
-				break;
-			}
+
 			main_ari_handler();
 			break;
 		}
@@ -88,7 +71,7 @@ namespace Malachite
 		{
 			if (value_stack.size() < 2)
 			{
-				Logger::Get().PrintTypeError("Mod is binary operation, but gets only one.", ip);
+				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
 				break;
 			}
 			ValueFrame right = value_stack.top(); value_stack.pop();
@@ -96,7 +79,7 @@ namespace Malachite
 
 			// Mod только для целых типов
 			if ((left.value_type != Type::VMAnalog::INT && left.value_type != Type::VMAnalog::UINT) || (right.value_type != Type::VMAnalog::INT && right.value_type != Type::VMAnalog::UINT)) {
-				Logger::Get().PrintTypeError("Mod operation requires integer types", ip);
+				Logger::Get().PrintTypeError("Mod operation requires integer types.", ip);
 				break;
 			}
 			uint64_t converted_reg;
@@ -117,7 +100,7 @@ namespace Malachite
 				right.used_register
 			));
 
-			regsTable.Acquire(right.used_register);
+			regsTable.Release(right.used_register);
 			value_stack.push(ValueFrame(left.used_register, common_type));
 			break;
 		}
@@ -133,7 +116,7 @@ namespace Malachite
 
 			// Negative только для знаковых типов (INT, DOUBLE)
 			if (vf_left.value_type != Type::VMAnalog::INT && vf_left.value_type != Type::VMAnalog::DOUBLE) {
-				Logger::Get().PrintTypeError("Negative operation requires signed types (int, double)", ip);
+				Logger::Get().PrintTypeError("Negative operation requires signed types (int, double).", ip);
 				break;
 			}
 
@@ -145,6 +128,261 @@ namespace Malachite
 		}
 		return result;
 	}
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleLogicCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
+	{
+		std::vector<MalachiteCore::VMCommand> result;
+		PseudoCommand cmd = cmds[ip];
+		auto main_logic_handler = [&]() -> void
+			{
+				if (value_stack.size() < 2)
+				{
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
+					return;
+				}
+				ValueFrame right = value_stack.top(); value_stack.pop();
+				ValueFrame left = value_stack.top(); value_stack.pop();
+
+				result.push_back(MalachiteCore::VMCommand(
+					GetVMLogicCommand(cmd.op_code,Type::VMAnalog::UINT),
+					left.used_register,
+					left.used_register,
+					right.used_register
+				));
+
+				regsTable.Release(right.used_register);
+				value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
+			};
+		auto main_cmp_handler = [&](uint32_t flag) -> void
+			{
+				if (value_stack.size() < 2)
+				{
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
+					return;
+				}
+				ValueFrame right = value_stack.top(); value_stack.pop();
+				ValueFrame left = value_stack.top(); value_stack.pop();
+
+				uint64_t converted_reg;
+				Type::VMAnalog common_type;
+				auto conv_cmd = GetVMTypeConvertionCommand(
+					left.value_type, left.used_register,
+					right.value_type, right.used_register,
+					converted_reg, common_type
+				);
+				if (conv_cmd.operation != MalachiteCore::OpCode::OP_NOP) {
+					result.push_back(conv_cmd);
+				}
+
+				result.push_back(MalachiteCore::VMCommand(
+					GetVMLogicCommand(cmd.op_code, common_type),
+					0,						//In CMP and DCMP destination is null
+					left.used_register,
+					right.used_register
+				));
+				result.push_back(MalachiteCore::VMCommand(
+					MalachiteCore::OpCode::OP_GET_FLAG,
+					left.used_register,
+					flag
+				));
+				regsTable.Release(right.used_register);
+				value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//flag 0,1
+			};
+		switch (cmd.op_code)
+		{
+		case PseudoOpCode::And:
+			main_logic_handler();
+			break;
+		case PseudoOpCode::Or:
+			main_logic_handler();
+			break;
+		case PseudoOpCode::Not:
+		{
+			if (value_stack.size() < 1)
+			{
+				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is unary operation, but gets only zero.", ip);
+				break;
+			}
+			ValueFrame left = value_stack.top(); value_stack.pop();
+
+			result.push_back(MalachiteCore::VMCommand(
+				MalachiteCore::OpCode::OP_NOT_RR,
+				left.used_register,
+				left.used_register
+			));
+
+			value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
+		}
+			break;
+		case PseudoOpCode::BitOr:
+			main_logic_handler();
+			break;
+		case PseudoOpCode::BitNot:
+		{
+			if (value_stack.size() < 1)
+			{
+				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is unary operation, but gets only zero.", ip);
+				break;
+			}
+			ValueFrame left = value_stack.top(); value_stack.pop();
+
+			result.push_back(MalachiteCore::VMCommand(
+				MalachiteCore::OpCode::OP_BIT_NOT_RR,
+				left.used_register,
+				left.used_register
+			));
+
+			value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
+		}
+			break;
+		case PseudoOpCode::BitAnd:
+			main_logic_handler();
+			break;
+		case PseudoOpCode::BitOffsetLeft:
+			main_logic_handler();
+			break;
+		case PseudoOpCode::BitOffsetRight:
+			main_logic_handler();
+			break;
+
+		//Comparings
+
+		case PseudoOpCode::Equal:
+			main_cmp_handler(MalachiteCore::FLAG::EQUAL_FLAG);
+			break;
+		case PseudoOpCode::NotEqual:
+			main_cmp_handler(MalachiteCore::FLAG::NOT_EQUAL_FLAG);
+			break;
+		case PseudoOpCode::Greater:
+			main_cmp_handler(MalachiteCore::FLAG::GREATER_FLAG);
+			break;
+		case PseudoOpCode::Less:
+			main_cmp_handler(MalachiteCore::FLAG::LESS_FLAG);
+			break;
+		case PseudoOpCode::GreaterEqual:
+			main_cmp_handler(MalachiteCore::FLAG::EQUAL_FLAG | MalachiteCore::FLAG::GREATER_FLAG);
+			break;
+		case PseudoOpCode::LessEqual:
+			main_cmp_handler(MalachiteCore::FLAG::EQUAL_FLAG | MalachiteCore::FLAG::LESS_FLAG);
+			break;
+		default:
+			break;
+		}
+		return result;
+	}
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
+	{
+		std::vector<MalachiteCore::VMCommand> result;
+		PseudoCommand cmd = cmds[ip];
+		switch (cmd.op_code)
+		{
+			case PseudoOpCode::Jump:
+			{
+				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
+
+				if (!labels.count(l_id))
+				{
+					waiting_jumps[l_id].push_back({ ip,current_commands->size() });
+					result.push_back(MalachiteCore::VMCommand(
+						MalachiteCore::OpCode::OP_JMP,
+						l_id
+					));
+				}
+				else 
+				{
+					uint64_t jump_ip = labels[l_id];
+					result.push_back(MalachiteCore::VMCommand(
+						MalachiteCore::OpCode::OP_JMP,
+						jump_ip
+					));
+				}
+			}
+			break;
+			case PseudoOpCode::JumpIf:
+			{
+				if (value_stack.size() < 1)
+				{
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a boolean value.", ip);
+					break;
+				}
+				ValueFrame left = value_stack.top(); value_stack.pop();
+				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
+
+				if (!labels.count(l_id))
+				{
+					waiting_jumps[l_id].push_back({ ip,current_commands->size() });
+					result.push_back(MalachiteCore::VMCommand(
+						MalachiteCore::OpCode::OP_JMP_CV,
+						l_id,
+						left.used_register
+					));
+				}
+				else
+				{
+					uint64_t jump_ip = labels[l_id];
+					result.push_back(MalachiteCore::VMCommand(
+						MalachiteCore::OpCode::OP_JMP_CV,
+						jump_ip,
+						left.used_register));
+				}
+				regsTable.Release(left.used_register);
+			}
+			break;
+			case PseudoOpCode::JumpNotIf:
+			{
+				if (value_stack.size() < 1)
+				{
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a boolean value.", ip);
+					break;
+				}
+				ValueFrame left = value_stack.top(); value_stack.pop();
+				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
+
+				if (!labels.count(l_id))
+				{
+					waiting_jumps[l_id].push_back({ ip,current_commands->size() });
+					result.push_back(MalachiteCore::VMCommand(
+						MalachiteCore::OpCode::OP_JMP_CNV,
+						l_id,
+						left.used_register
+					));
+				}
+				else
+				{
+					uint64_t jump_ip = labels[l_id];
+					result.push_back(MalachiteCore::VMCommand(
+						MalachiteCore::OpCode::OP_JMP_CNV,
+						jump_ip,
+						left.used_register));
+				}
+				regsTable.Release(left.used_register);
+			}
+			break;
+			case PseudoOpCode::Label:
+			{
+				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
+
+				if (labels.count(l_id)) 
+				{
+					Logger::Get().PrintTypeError("Label with id = " + std::to_string(l_id) + " already exists.",ip);
+					break;
+				}
+
+				auto last_ip = current_commands->size();
+
+				labels[l_id] = last_ip;
+				if (waiting_jumps.count(l_id)) 
+				{
+					for (auto& jump_ip : waiting_jumps[l_id])
+					{
+						current_commands->at(jump_ip.second).destination = last_ip;
+					}
+					waiting_jumps.erase(l_id);
+				}
+			}
+			break;
+		}
+		return result;
+	}
 	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
@@ -153,7 +391,7 @@ namespace Malachite
 		{
 		case PseudoOpCode::Immediate:
 		{
-			TokenValue val = cmd.parameters[PseudoFieldNames::Get().valueID_name];
+			TokenValue val = cmd.parameters[PseudoCodeInfo::Get().valueID_name];
 			auto free_register = regsTable.Allocate();
 			if (free_register == InvalidRegister)
 			{
@@ -197,7 +435,7 @@ namespace Malachite
 			break;
 		case PseudoOpCode::Load:
 		{
-			Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoFieldNames::Get().variableID_name].uintVal);
+			Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
 			Type& type = current_state->types_global_table.at(var.type_id);
 			auto info = variable_depth.at(var.variable_id);
 			auto free_register = regsTable.Allocate();
@@ -241,7 +479,7 @@ namespace Malachite
 		}
 		case PseudoOpCode::Store:
 		{
-			Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoFieldNames::Get().variableID_name].uintVal);
+			Variable& var = current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
 			Type& type = current_state->types_global_table.at(var.type_id);
 			auto info = variable_depth.at(var.variable_id);
 
@@ -277,7 +515,7 @@ namespace Malachite
 					size_and_depth |= info.depth;	//uint64_t and int64_t size...0 -> size...depth
 					result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_STORE_ENCLOSING_A, info.stack_offset, vf.used_register, size_and_depth));
 				}
-				regsTable.Acquire(vf.used_register);
+				regsTable.Release(vf.used_register);
 				return result;
 			}
 			else if (type.category == Type::Category::ALIAS)
