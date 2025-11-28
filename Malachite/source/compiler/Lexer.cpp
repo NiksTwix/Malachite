@@ -205,6 +205,9 @@ namespace Malachite
 		undefined_token = std::string();
 		is_negative_value = false;
 		bool in_string = false;
+
+		bool in_symbol_literal = false;
+
 		for (size_t i = 0; i < text.size(); i++)
 		{
 			char c = text[i];
@@ -214,7 +217,7 @@ namespace Malachite
 				current_line++;
 			}
 			// Simple line comments
-			if (!in_string)
+			if (!in_string && !in_symbol_literal)
 			{
 				if (c == '/' && i + 1 < text.size() && text[i + 1] == '/') {
 					while (i < text.size() && text[i] != '\n')
@@ -243,7 +246,7 @@ namespace Malachite
 					continue;
 				}
 
-				if ((c == ' ' || c == '\n' || c == '\t'))
+				if (c == ' '|| c == '\n' || c == '\t')
 				{
 					if (!undefined_token.empty())
 					{
@@ -323,14 +326,27 @@ namespace Malachite
 				}
 			}
 
-
-			if (c == '\"' && undefined_token.empty())
+			if (c == '\'' && undefined_token.empty() && !in_string)
+			{
+				in_symbol_literal = true;
+				undefined_token.push_back(c);
+				continue;
+			}
+			if (c == '\'' && !undefined_token.empty() && in_symbol_literal)
+			{
+				in_symbol_literal = false;
+				undefined_token.push_back(c);
+				result.push_back(CreateToken(undefined_token, current_line));
+				undefined_token.clear();
+				continue;
+			}
+			if (c == '\"' && undefined_token.empty() && !in_symbol_literal)
 			{
 				in_string = true;
 				undefined_token.push_back(c);
 				continue;
 			}
-			if (c == '\"' && !undefined_token.empty())
+			if (c == '\"' && !undefined_token.empty() && in_string)
 			{
 				in_string = false;
 				undefined_token.push_back(c);
@@ -338,7 +354,7 @@ namespace Malachite
 				undefined_token.clear();
 				continue;
 			}
-			if ((c == ' ' || c == '\n' || c == '\t') && !in_string) continue;
+			if ((c == ' ' || c == '\n' || c == '\t') && !in_string && !in_symbol_literal) continue;
 			undefined_token.push_back(c);
 		}
 

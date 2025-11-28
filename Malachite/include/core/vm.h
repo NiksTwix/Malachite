@@ -56,6 +56,7 @@ namespace MalachiteCore {
         VMCommand(OpCode oper, uint64_t dest, uint64_t src0) : operation(oper), destination(dest), source0(src0) {}
         VMCommand(OpCode oper, uint64_t dest) : operation(oper), destination(dest){}
         VMCommand(OpCode oper, uint64_t dest, Register imm) : operation(oper), destination(dest), immediate(imm) {}
+        VMCommand(OpCode oper, uint64_t dest, uint64_t src0, uint64_t src1, Register immediate) : operation(oper), destination(dest), source0(src0), source1(src1), immediate(immediate){}
         VMCommand(OpCode oper) : operation(oper) {}
     };
 
@@ -93,9 +94,4 @@ namespace MalachiteCore {
     inline bool is_valid_stack_address(uint64_t addr) {
         return addr >= STACK_END && addr <= STACK_START;
     }
-    /*
-    OP_NEW_OBJECT, R1, PlayerClass
-    OP_LOAD_INT, R2, 10
-    OP_SET_FIELD, R1, Player_x_offset, R2
-    */
 }

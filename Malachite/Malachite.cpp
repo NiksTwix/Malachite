@@ -11,14 +11,50 @@ using namespace MalachiteCore;
 int main()
 {
 	std::string code = R"CODE(
-	float x = 100;
-	op_code debug
+	int x = 2000;
+	
+	if (x == 2000)
 	{
-		LOAD_RV RA, x
-		OP_MOV_RI_INT RB, 100
-		OP_IADD_RRR RA,RA,RB
-		STORE_VR x, RA
-	}	
+		op_code	hello_world
+		{
+			OP_MOV_RI_INT RA, 'H'
+			OP_MOV_RI_INT RB, 'e'
+			OP_MOV_RI_INT RC, 'l'
+			OP_MOV_RI_INT RD, 'l'
+			OP_MOV_RI_INT RE, 'o'
+			OP_MOV_RI_INT RF, ' '
+			OP_MOV_RI_INT RG, 'w'
+			OP_MOV_RI_INT RH, 'o'
+			OP_SYSTEM_CALL 2 RA
+			OP_SYSTEM_CALL 2 RB
+			OP_SYSTEM_CALL 2 RC
+			OP_SYSTEM_CALL 2 RD
+			OP_SYSTEM_CALL 2 RE
+			OP_SYSTEM_CALL 2 RF
+			OP_SYSTEM_CALL 2 RG
+			OP_SYSTEM_CALL 2 RH
+			OP_MOV_RI_INT RA, 'r'
+			OP_MOV_RI_INT RB, 'l'
+			OP_MOV_RI_INT RC, 'd'
+			OP_SYSTEM_CALL 2 RA
+			OP_SYSTEM_CALL 2 RB
+			OP_SYSTEM_CALL 2 RC
+		}
+	}
+	else
+	{
+		op_code	no
+		{
+			OP_MOV_RI_INT RA, 'N'
+			OP_MOV_RI_INT RB, '0'
+			OP_MOV_RI_INT RC, ':'
+			OP_MOV_RI_INT RD, '('
+			OP_SYSTEM_CALL 2 RA
+			OP_SYSTEM_CALL 2 RB
+			OP_SYSTEM_CALL 2 RC
+			OP_SYSTEM_CALL 2 RD
+		}	
+	}
 
 )CODE";
 
@@ -30,8 +66,8 @@ int main()
 	int i = 0;
 	Malachite::PseudoByteDecoder pbd;
 	auto r = pbd.GeneratePseudoCode(tree);
-	//Malachite::ByteDecoder bd;
-	//auto r1 = bd.PseudoToByte(r);
+	Malachite::ByteDecoder bd;
+	auto r1 = bd.PseudoToByte(r);
 
 	std::cout << "MalachiteTest--------------------------------\n";
 
@@ -53,23 +89,23 @@ int main()
 	}
 	std::cout << "ByteCode-------------------------------------\n";
 	index = 0;
-	//for (auto& t1 : r1)
-	//{
-	//	std::string output;
-	//	output += Malachite::SyntaxInfo::GetByteString(t1.operation) + "  ";
-	//	output += std::to_string(t1.destination) + "\t";
-	//	output += std::to_string(t1.source0) + "\t";
-	//	output += std::to_string(t1.source1) + "\t";
-	//	output += std::to_string(t1.immediate.i) + "I|\t";
-	//	output += std::to_string(t1.immediate.u) + "U|\t";
-	//	output += std::to_string(t1.immediate.d) + "D|\t";
-	//	Malachite::Logger::Get().PrintInfo(output,index);
-	//	index++;
-	//}
-	//
-	//VMState state;
-	//MalachiteCore::VMError err = execute(&state, r1.data(), r1.size());
-	//
+	for (auto& t1 : r1)
+	{
+		std::string output;
+		output += Malachite::SyntaxInfo::GetByteString(t1.operation) + "  ";
+		output += std::to_string(t1.destination) + "\t";
+		output += std::to_string(t1.source0) + "\t";
+		output += std::to_string(t1.source1) + "\t";
+		output += std::to_string(t1.immediate.i) + "I|\t";
+		output += std::to_string(t1.immediate.u) + "U|\t";
+		output += std::to_string(t1.immediate.d) + "D|\t";
+		Malachite::Logger::Get().PrintInfo(output,index);
+		index++;
+	}
+	
+	VMState state;
+	MalachiteCore::VMError err = execute(&state, r1.data(), r1.size());
+	
 	//if (err)
 	//{
 	//	auto r = state.error_stack.top();

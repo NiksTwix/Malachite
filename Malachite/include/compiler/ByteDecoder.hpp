@@ -124,14 +124,17 @@ namespace Malachite
 
         ByteDecodingState current_BDS;
         //Methods---------------------
-        std::vector<MalachiteCore::VMCommand> HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
-        std::vector<MalachiteCore::VMCommand> HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
-        std::vector<MalachiteCore::VMCommand> HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
-        std::vector<MalachiteCore::VMCommand> HandleLogicCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
+        std::vector<MalachiteCore::VMCommand> HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
+        std::vector<MalachiteCore::VMCommand> HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
+        std::vector<MalachiteCore::VMCommand> HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
+        std::vector<MalachiteCore::VMCommand> HandleLogicCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
 
-        std::vector<MalachiteCore::VMCommand> HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
+        std::vector<MalachiteCore::VMCommand> HandleOpCodeSectionCommands(const std::vector<PseudoCommand>& cmds, size_t& ip);
 
-        std::vector<MalachiteCore::VMCommand> HandleCommand(const std::vector<PseudoCommand>& cmds, size_t ip);
+
+        std::vector<MalachiteCore::VMCommand> HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
+
+        std::vector<MalachiteCore::VMCommand> HandleCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
 
 
 

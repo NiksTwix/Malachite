@@ -270,8 +270,8 @@ namespace Malachite
 			{
 				std::string arg_name = PseudoCodeInfo::Get().opcodeImmediate_name;
 				if (j == 0) arg_name = PseudoCodeInfo::Get().opcodeDestination_name;
-				if (j == 1 && arguments[j].type == TokenType::IDENTIFIER) arg_name = PseudoCodeInfo::Get().opcodeSource0_name;
-				if (j == 2 && arguments[j].type == TokenType::IDENTIFIER) arg_name = PseudoCodeInfo::Get().opcodeSource1_name;
+				if (j == 1 && (arguments[j].type == TokenType::IDENTIFIER)) arg_name = PseudoCodeInfo::Get().opcodeSource0_name;
+				if (j == 2 && (arguments[j].type == TokenType::IDENTIFIER)) arg_name = PseudoCodeInfo::Get().opcodeSource1_name;
 
 				if (arg_name == PseudoCodeInfo::Get().opcodeImmediate_name)pc.parameters[arg_name] = arguments[j].value;
 				else //check registers
@@ -280,6 +280,8 @@ namespace Malachite
 					{
 						pc.parameters[arg_name] = arguments[j].value.strVal;
 					}
+					else if (arguments[j].value.type == TokenValueType::INT)pc.parameters[arg_name] = arguments[j].value.intVal;
+					else if (arguments[j].value.type == TokenValueType::UINT)pc.parameters[arg_name] = arguments[j].value.uintVal;
 					else if (arguments[j].value.strVal != "")
 					{
 						Logger::Get().PrintLogicError("Invalid register \"" + arguments[j].value.strVal + "\" in opcode section.", node.children[i].line);

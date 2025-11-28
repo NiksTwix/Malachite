@@ -5,7 +5,7 @@
 //Memory and arithmetic code generation
 namespace Malachite 
 {
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
 	{
 		//e convert the type of the right value to the left one
 		std::vector<MalachiteCore::VMCommand> result;
@@ -128,7 +128,7 @@ namespace Malachite
 		}
 		return result;
 	}
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleLogicCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleLogicCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
 		PseudoCommand cmd = cmds[ip];
@@ -269,7 +269,150 @@ namespace Malachite
 		}
 		return result;
 	}
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleOpCodeSectionCommands(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	{
+		std::unordered_map<std::string, uint64_t> registers;
+		std::vector<MalachiteCore::VMCommand> result;
+
+		bool ended = false;
+
+		for (; ip < cmds.size(); ip++) 
+		{
+			const PseudoCommand& command = cmds[ip];
+
+			if (command.op_code == PseudoOpCode::OpCodeStart) continue;
+			else if (command.op_code == PseudoOpCode::OpCodeEnd) {
+				//Free allocated registers
+				for (auto& reg : registers) 
+				{
+					current_BDS.regsTable.Release(reg.second);
+				}
+				registers.clear();
+				ended = true;
+				break;
+			}
+			else if (command.op_code == PseudoOpCode::OpCodeAllocateBasicRegisters) 
+			{
+				for (std::string reg: SyntaxInfo::GetOpCodeRegistersList())
+				{
+					uint64_t reg_number = current_BDS.regsTable.Allocate();
+					if (reg_number == InvalidRegister) 
+					{
+						Logger::Get().PrintTypeError("Basic registers hasnt allocated. Register's table hasn't free registers.", ip);
+						break;
+					}
+					registers.insert({ reg,reg_number });
+				}
+			}
+			else if (command.op_code == PseudoOpCode::OpCodeStoreVR) 
+			{
+				Variable& var = current_BDS.current_state->variables_global_table.at(command.parameters.at(PseudoCodeInfo::Get().opcodeDestination_name).uintVal);
+
+				auto register_ = command.parameters.at(PseudoCodeInfo::Get().opcodeSource0_name).strVal;
+				size_t reg_number = registers[register_];
+				Type& type = current_BDS.current_state->types_global_table.at(var.type_id);
+				auto info = current_BDS.variable_depth.at(var.variable_id);
+
+				size_t size = type.size;
+				if (type.category == Type::Category::PRIMITIVE)
+				{
+					if (info.depth == current_BDS.current_depth)
+					{
+						result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_STORE_LOCAL, info.stack_offset, reg_number, type.size));
+					}
+					else
+					{
+						uint64_t size_and_depth = size << 32;	//0...size -> size...0
+						size_and_depth |= info.depth;	//uint64_t and int64_t size...0 -> size...depth
+						result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_STORE_ENCLOSING_A, info.stack_offset, reg_number, size_and_depth));
+					}
+				}
+				else if (type.category == Type::Category::ALIAS){}	//thinking
+				else if (type.category == Type::Category::CLASS){}
+			}
+			else if (command.op_code == PseudoOpCode::OpCodeLoadRV)
+			{
+				Variable& var = current_BDS.current_state->variables_global_table.at(command.parameters.at(PseudoCodeInfo::Get().opcodeSource0_name).uintVal);
+				Type& type = current_BDS.current_state->types_global_table.at(var.type_id);
+
+				auto register_ = command.parameters.at(PseudoCodeInfo::Get().opcodeDestination_name).strVal;
+				size_t reg_number = registers[register_];
+
+				auto info = current_BDS.variable_depth.at(var.variable_id);
+				size_t size = type.size;
+				if (type.category == Type::Category::PRIMITIVE)
+				{
+					//PseudoDecoder checked vars validity
+					if (info.depth == current_BDS.current_depth)
+					{
+						result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_LOAD_LOCAL, reg_number, info.stack_offset, type.size));
+
+					}
+					else //
+					{
+						uint64_t size_and_depth = size << 32;	//0...size -> size...0
+						size_and_depth |= info.depth;	//uint64_t and int64_t size...0 -> size...depth
+						result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_LOAD_ENCLOSING_A, reg_number, info.stack_offset, size_and_depth));
+					}
+					if (type.vm_analog == Type::VMAnalog::NONE)
+					{
+						Logger::Get().PrintLogicError("Primitive type \"" + type.name + "\" hasnt analog in the Malachite Virtual Machine.Instruction pointer of pseudo code : " + std::to_string(ip), ip);
+						break;
+					}
+				}
+				else if (type.category == Type::Category::ALIAS){}	//thinking
+				else if (type.category == Type::Category::CLASS){}
+			}
+			else //Commmon commands work only with registers RA-RH!
+			{
+				TokenValue opcode = command.parameters.count(PseudoCodeInfo::Get().opcodeCommandCode_name) ? command.parameters.at(PseudoCodeInfo::Get().opcodeCommandCode_name) : TokenValue((uint64_t)MalachiteCore::OpCode::OP_NOP);
+				TokenValue destination = command.parameters.count(PseudoCodeInfo::Get().opcodeDestination_name) ? command.parameters.at(PseudoCodeInfo::Get().opcodeDestination_name) : TokenValue((uint64_t)0);
+				TokenValue source0 = command.parameters.count(PseudoCodeInfo::Get().opcodeSource0_name) ? command.parameters.at(PseudoCodeInfo::Get().opcodeSource0_name) : TokenValue((uint64_t)0);
+				TokenValue source1 = command.parameters.count(PseudoCodeInfo::Get().opcodeSource1_name) ? command.parameters.at(PseudoCodeInfo::Get().opcodeSource1_name) : TokenValue((uint64_t)0);
+				TokenValue immediate = command.parameters.count(PseudoCodeInfo::Get().opcodeImmediate_name) ? command.parameters.at(PseudoCodeInfo::Get().opcodeImmediate_name) : TokenValue((uint64_t)0);
+
+				size_t reg_dest = 0, reg_src0 = 0, reg_src1 = 0;
+
+				if (destination.strVal != "") reg_dest = registers[destination.strVal];
+				else if (destination.type == TokenValueType::UINT || destination.type == TokenValueType::INT) reg_dest = destination.type == TokenValueType::INT ? destination.intVal: destination.uintVal;
+				if (source0.strVal != "") reg_src0 = registers[source0.strVal];
+				else if (source0.type == TokenValueType::UINT || source0.type == TokenValueType::INT)  reg_src0 = source0.type == TokenValueType::INT ? source0.intVal : source0.uintVal;
+				if (source1.strVal != "") reg_src1 = registers[source1.strVal];
+				else if (source1.type == TokenValueType::UINT || source1.type == TokenValueType::INT) reg_src1 = source1.type == TokenValueType::INT ? source1.intVal : source1.uintVal;
+
+				MalachiteCore::Register immediate_r;
+
+				switch (immediate.type)
+				{
+				case TokenValueType::INT:
+					immediate_r.i = immediate.intVal;
+					break;
+				case TokenValueType::FLOAT:
+					immediate_r.d = immediate.floatVal;
+					break;
+				case TokenValueType::UINT:
+					immediate_r.u = immediate.uintVal;
+					break;
+				case TokenValueType::CHAR:
+					immediate_r.i = immediate.charVal;
+					break;
+				case TokenValueType::BOOL:
+					immediate_r.u = immediate.boolVal;
+					break;
+				}
+				auto result1 = MalachiteCore::VMCommand((MalachiteCore::OpCode)opcode.uintVal, reg_dest, reg_src0, reg_src1, immediate_r);
+				result.push_back(result1);
+			}
+
+		}
+		if (!ended) 
+		{
+			Logger::Get().PrintSyntaxError("Opcode section hasnt end label.", ip);
+		}
+
+		return result;
+	}
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
 		PseudoCommand cmd = cmds[ip];
@@ -383,7 +526,7 @@ namespace Malachite
 		}
 		return result;
 	}
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
 		PseudoCommand cmd = cmds[ip];

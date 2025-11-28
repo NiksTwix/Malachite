@@ -9,7 +9,7 @@ namespace Malachite
 
 	
 
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
 		PseudoCommand cmd = cmds[ip];
@@ -51,7 +51,7 @@ namespace Malachite
 		return result;
 	}
 	
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleCommand(const std::vector<PseudoCommand>& cmds, size_t ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
 		PseudoCommand pd = cmds[ip];
@@ -98,6 +98,12 @@ namespace Malachite
 		if (pd.op_code > PseudoOpCode::START_SECTION_CONTROL_FLOW_OPS && pd.op_code < PseudoOpCode::END_SECTION_CONTROL_FLOW_OPS)
 		{
 			auto result1 = HandleControlFlowCommand(cmds, ip);
+			result.insert(result.end(), result1.begin(), result1.end());
+		}
+		//OpCode
+		if (pd.op_code == PseudoOpCode::OpCodeStart)
+		{
+			auto result1 = HandleOpCodeSectionCommands(cmds, ip);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
 		return result;

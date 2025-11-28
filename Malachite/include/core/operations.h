@@ -101,8 +101,9 @@ namespace MalachiteCore
     enum SysCall 
     {
         //PRINT
-        PRINT_INT = 0,
-        PRINT_DOUBLE,
+        PRINT_INT = 0,        // source0[param0-register],
+        PRINT_DOUBLE,        // source0[param0-register],
+        PRINT_CHAR,         // source0[param0-register]
         PRINT_CHAR_ARRAY,   // source0[param0-pointer], source1[param1-size of string]
     };
 

@@ -65,8 +65,14 @@ namespace MalachiteCore
 
 		return VMError::NO_ERROR;
 	}
-	VMError syscalls_handler(VMState* state, VMCommand* command)
+	VMError syscalls_handler(VMState* state, VMCommand* command)	
 	{
+		/*In the future will be table of system calls with auto identification and including 
+		c++ dll files.INCLUDE_EXTERNAL-> 
+		Load DLL ->
+		Set id to it -> 
+		return id to malachite high code(loading from register with op_code section help)
+		*/
 		SysCall call = static_cast<SysCall>(command->destination);
 
 		switch (call)
@@ -75,6 +81,11 @@ namespace MalachiteCore
 		{
 			uint64_t value = state->registers[command->source0].i;	//Take value from register
 			std::cout << value;
+			break;
+		}
+		case MalachiteCore::PRINT_CHAR:
+		{
+			putchar(state->registers[command->source0].i);//Take value from register
 			break;
 		}
 		case MalachiteCore::PRINT_DOUBLE:
