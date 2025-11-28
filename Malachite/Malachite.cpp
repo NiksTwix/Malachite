@@ -13,47 +13,12 @@ int main()
 	std::string code = R"CODE(
 	int x = 2000;
 	
-	if (x == 2000)
+	x += 5004
+
+	op_code
 	{
-		op_code	hello_world
-		{
-			OP_MOV_RI_INT RA, 'H'
-			OP_MOV_RI_INT RB, 'e'
-			OP_MOV_RI_INT RC, 'l'
-			OP_MOV_RI_INT RD, 'l'
-			OP_MOV_RI_INT RE, 'o'
-			OP_MOV_RI_INT RF, ' '
-			OP_MOV_RI_INT RG, 'w'
-			OP_MOV_RI_INT RH, 'o'
-			OP_SYSTEM_CALL 2 RA
-			OP_SYSTEM_CALL 2 RB
-			OP_SYSTEM_CALL 2 RC
-			OP_SYSTEM_CALL 2 RD
-			OP_SYSTEM_CALL 2 RE
-			OP_SYSTEM_CALL 2 RF
-			OP_SYSTEM_CALL 2 RG
-			OP_SYSTEM_CALL 2 RH
-			OP_MOV_RI_INT RA, 'r'
-			OP_MOV_RI_INT RB, 'l'
-			OP_MOV_RI_INT RC, 'd'
-			OP_SYSTEM_CALL 2 RA
-			OP_SYSTEM_CALL 2 RB
-			OP_SYSTEM_CALL 2 RC
-		}
-	}
-	else
-	{
-		op_code	no
-		{
-			OP_MOV_RI_INT RA, 'N'
-			OP_MOV_RI_INT RB, '0'
-			OP_MOV_RI_INT RC, ':'
-			OP_MOV_RI_INT RD, '('
-			OP_SYSTEM_CALL 2 RA
-			OP_SYSTEM_CALL 2 RB
-			OP_SYSTEM_CALL 2 RC
-			OP_SYSTEM_CALL 2 RD
-		}	
+		LOAD_RV RA, x
+		OP_SYSTEM_CALL PRINT_INT, RA
 	}
 
 )CODE";

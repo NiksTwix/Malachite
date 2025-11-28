@@ -278,8 +278,8 @@ namespace Malachite
 
     struct PseudoCommand
     {
-        PseudoOpCode op_code;
-        std::unordered_map<std::string, TokenValue> parameters; //Example,  op_code: DeclareVariable, parameters: name-"x"
+        PseudoOpCode op_code{};
+        std::unordered_map<std::string, TokenValue> parameters{}; //Example,  op_code: DeclareVariable, parameters: name-"x"
     };
 
 
@@ -578,6 +578,20 @@ namespace Malachite
             }
             return StringToOpCode;
         }
+        static std::unordered_map< std::string, uint64_t>& GetOpCodeConstantsMap()
+        {
+            static std::unordered_map< std::string,uint64_t> StringToOpCodeConstant =
+            {   
+                //Syscalls
+                {"PRINT_INT", MalachiteCore::SysCall::PRINT_INT},
+                {"PRINT_UINT", MalachiteCore::SysCall::PRINT_UINT},
+                {"PRINT_DOUBLE", MalachiteCore::SysCall::PRINT_DOUBLE},
+                {"PRINT_CHAR", MalachiteCore::SysCall::PRINT_CHAR},
+                {"PRINT_CHAR_ARRAY", MalachiteCore::SysCall::PRINT_CHAR_ARRAY},
+            };
+
+            return StringToOpCodeConstant;
+        }
     public:
         #pragma region  GetMethods
         static TokenType GetTokenType(const std::string& string_token)
@@ -610,11 +624,39 @@ namespace Malachite
             auto map = GetStrOpCodeMap();
             return map.count(code) ? map[code] : MalachiteCore::OpCode::OP_NOP;
         }
+
+        static uint64_t GetOpCodeConstant(const std::string& code)
+        {
+            auto map = GetOpCodeConstantsMap();
+            return map.count(code) ? map[code] : SIZE_MAX;
+        }
+
         static std::unordered_set<std::string> GetOpCodeRegistersList() 
         {
             static std::unordered_set<std::string> opCodeRegisters = { "RA","RB","RC","RD","RE","RF","RG","RH" };
             return opCodeRegisters;
         }
+
+        static PseudoOpCode GetOperationFromComplexAssign(const std::string& code)
+        {
+            static std::unordered_map<std::string, PseudoOpCode> assigns = {
+                {"=",  PseudoOpCode::Store},
+                {"+=", PseudoOpCode::Add},
+                {"-=", PseudoOpCode::Subtract},
+                {"*=", PseudoOpCode::Multiplication},
+                {"/=", PseudoOpCode::Division},
+                {"%=", PseudoOpCode::Mod},
+                {"&=", PseudoOpCode::BitAnd},
+                {"|=", PseudoOpCode::BitOr},
+                {"<<=",PseudoOpCode::BitOffsetLeft},
+                {">>=",PseudoOpCode::BitOffsetRight},
+                {"&&=",PseudoOpCode::And},
+                {"||=",PseudoOpCode::Or},
+                {"~=", PseudoOpCode::BitNot},
+            };
+            return assigns.count(code) ? assigns[code] : PseudoOpCode::Nop;
+        }
+        
 
         #pragma endregion
 
@@ -629,6 +671,9 @@ namespace Malachite
 
             return ConditionBlockParType::NOTHING;
         }
+
+
+        
     };
 
     class PseudoCodeInfo 

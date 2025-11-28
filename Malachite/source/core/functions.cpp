@@ -74,12 +74,17 @@ namespace MalachiteCore
 		return id to malachite high code(loading from register with op_code section help)
 		*/
 		SysCall call = static_cast<SysCall>(command->destination);
-
 		switch (call)
 		{
 		case MalachiteCore::PRINT_INT:
 		{
-			uint64_t value = state->registers[command->source0].i;	//Take value from register
+			int64_t value = state->registers[command->source0].i;	//Take value from register
+			std::cout << value;
+			break;
+		}
+		case MalachiteCore::PRINT_UINT:
+		{
+			uint64_t value = state->registers[command->source0].u;	//Take value from register
 			std::cout << value;
 			break;
 		}

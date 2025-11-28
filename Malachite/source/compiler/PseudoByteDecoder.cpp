@@ -273,18 +273,34 @@ namespace Malachite
 				if (j == 1 && (arguments[j].type == TokenType::IDENTIFIER)) arg_name = PseudoCodeInfo::Get().opcodeSource0_name;
 				if (j == 2 && (arguments[j].type == TokenType::IDENTIFIER)) arg_name = PseudoCodeInfo::Get().opcodeSource1_name;
 
-				if (arg_name == PseudoCodeInfo::Get().opcodeImmediate_name)pc.parameters[arg_name] = arguments[j].value;
+				TokenValue value_ = arguments[j].value;
+
+				if (arguments[j].type == TokenType::IDENTIFIER && !SyntaxInfo::GetOpCodeRegistersList().count(arguments[j].value.strVal))
+				{
+					auto constant = SyntaxInfo::GetOpCodeConstant(value_.strVal);
+					if (constant == SIZE_MAX)
+					{
+						Logger::Get().PrintLogicError("Invalid opcode constant \"" + value_.strVal + "\".", node.children[i].line);
+						continue;
+					}
+					else 
+					{
+						value_ = constant;
+					}
+				}
+
+				if (arg_name == PseudoCodeInfo::Get().opcodeImmediate_name)pc.parameters[arg_name] = value_;
 				else //check registers
 				{
 					if (SyntaxInfo::GetOpCodeRegistersList().count(arguments[j].value.strVal))
 					{
-						pc.parameters[arg_name] = arguments[j].value.strVal;
+						pc.parameters[arg_name] = value_.strVal;
 					}
-					else if (arguments[j].value.type == TokenValueType::INT)pc.parameters[arg_name] = arguments[j].value.intVal;
-					else if (arguments[j].value.type == TokenValueType::UINT)pc.parameters[arg_name] = arguments[j].value.uintVal;
-					else if (arguments[j].value.strVal != "")
+					else if (value_.type == TokenValueType::INT)pc.parameters[arg_name] = value_.intVal;
+					else if (value_.type == TokenValueType::UINT)pc.parameters[arg_name] = value_.uintVal;
+					else if (value_.strVal != "")
 					{
-						Logger::Get().PrintLogicError("Invalid register \"" + arguments[j].value.strVal + "\" in opcode section.", node.children[i].line);
+						Logger::Get().PrintLogicError("Invalid register \"" + value_.strVal + "\" in opcode section.", node.children[i].line);
 						continue;
 					}
 				}

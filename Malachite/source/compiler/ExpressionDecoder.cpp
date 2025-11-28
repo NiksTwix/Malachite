@@ -92,7 +92,7 @@ namespace Malachite
 
 		return result;
 	}
-	std::vector<PseudoCommand> ExpressionDecoder::PTP_HandleFunctionCall(const std::vector<TokensGroup>& postfix, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::PTP_HandleFunctionCall(const std::vector<TokensGroup>& postfix, ExpressionState& es)
 	{
 		//PTP-PostfixToPseude (Help method)
 		//Function's call handle
@@ -100,7 +100,7 @@ namespace Malachite
 		if (postfix.size() == 1) { Logger::Get().PrintLogicError("Invalid function call.", postfix[0].token.line);  return std::vector<PseudoCommand>(); }
 		std::string func_name = postfix[1].token.value.strVal;
 		//Functions search
-		auto* functions = state->FindFunctions(func_name);
+		auto* functions = es.state->FindFunctions(func_name);
 		if (!functions)
 		{
 			Logger::Get().PrintLogicError("Functions overloadings with name \"" + func_name + "\" dont exist.", postfix[1].token.line);
@@ -115,7 +115,7 @@ namespace Malachite
 		{
 			TokensGroup tg = postfix[i];
 			std::vector<TokensGroup> tgv = {tg};	//<- костыль!!!
-			auto commands = PTP_HandleExpression(tgv, state);
+			auto commands = PTP_HandleExpression(tgv, es);
 			result.insert(result.end(), commands.begin(), commands.end()); //x*x = LOAD LOAD MUL
 			result.push_back(PseudoCommand(PseudoOpCode::Push));	//Command without args -> stack principle 
 			//x*x = LOAD LOAD MUL PUSH
@@ -125,7 +125,7 @@ namespace Malachite
 		
 		for (size_t i = 0; i < functions->size(); i++) 
 		{
-			Function function = state->functions_global_table[(*functions)[i]];
+			Function function = es.state->functions_global_table[(*functions)[i]];
 		
 			if (function.args.size() == args_count) valid_functions.push_back((*functions)[i]);
 		
@@ -137,7 +137,7 @@ namespace Malachite
 		result.push_back(PseudoCommand(PseudoOpCode::Call, { {PseudoCodeInfo::Get().functionID_name, valid_functions[0]} }));
 		return result;
 	}
-	std::vector<PseudoCommand> ExpressionDecoder::PTP_HandleExpression(const std::vector<TokensGroup>& postfix, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::PTP_HandleExpression(const std::vector<TokensGroup>& postfix, ExpressionState& es)
 	{
 		//PTP-PostfixToPseude (Help method)
 		std::vector<PseudoCommand> result;
@@ -153,7 +153,7 @@ namespace Malachite
 				if (t.type == TokenType::IDENTIFIER)
 				{
 					//Add type converting later
-					if (auto* variable = state->FindVariable(t.value.strVal); variable)
+					if (auto* variable = es.state->FindVariable(t.value.strVal); variable)
 					{
 						result.push_back(PseudoCommand(PseudoOpCode::Load, { {PseudoCodeInfo::Get().variableID_name, variable->variable_id} }));
 					}
@@ -185,7 +185,7 @@ namespace Malachite
 				{
 				case (uint64_t)CompilationLabel::FUNCTION_CALL:	
 				{
-					auto result1 = PTP_HandleFunctionCall(tg.tokens, state);
+					auto result1 = PTP_HandleFunctionCall(tg.tokens, es);
 					result.insert(result.end(), result1.begin(), result1.end());
 					break;
 				}
@@ -209,16 +209,16 @@ namespace Malachite
 		}
 		return result;
 	}
-	std::vector<PseudoCommand> ExpressionDecoder::PostfixToPseudo(const std::vector<TokensGroup>& postfix, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::PostfixToPseudo(const std::vector<TokensGroup>& postfix, ExpressionState& es)
 	{
 		std::vector<PseudoCommand> result;
 		
-		result = PTP_HandleExpression(postfix,state);
+		result = PTP_HandleExpression(postfix,es);
 
 		return result;
 	}
 	
-	std::vector<PseudoCommand> ExpressionDecoder::ProcessLeftSide(const std::vector<Token>& left, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::ProcessLeftSide(const std::vector<Token>& left, ExpressionState& es)
 	{
 		std::vector<PseudoCommand> result;
 		bool is_const = false;
@@ -236,44 +236,44 @@ namespace Malachite
 			if (t.type == TokenType::TYPE_MARKER && i + 1 < left.size() &&
 				left[i + 1].type == TokenType::IDENTIFIER)
 			{
-				return HandleVariableDeclaration(left, i, is_const, state);
+				return HandleVariableDeclaration(left, i, is_const, es);
 			}
 			// Объявление кастомной переменной: "Vector x"
-			else if ((t.type == TokenType::IDENTIFIER && state->FindType(t.value.strVal)) && i + 1 < left.size() &&
+			else if ((t.type == TokenType::IDENTIFIER && es.state->FindType(t.value.strVal)) && i + 1 < left.size() &&
 				left[i + 1].type == TokenType::IDENTIFIER)
 			{
-				return HandleVariableDeclaration(left, i, is_const, state); 
+				return HandleVariableDeclaration(left, i, is_const, es);
 			}
 			// Присваивание существующей переменной: "x"
 			if (t.type == TokenType::IDENTIFIER) {
-				return HandleVariableAssignment(t, is_const, state);
+				return HandleVariableAssignment(t, is_const, es);
 			}
 		}
 
 		return result;
 	}
-	std::vector<PseudoCommand> ExpressionDecoder::HandleVariableDeclaration(const std::vector<Token>& left, size_t type_index, bool is_const, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::HandleVariableDeclaration(const std::vector<Token>& left, size_t type_index, bool is_const, ExpressionState& es)
 	{
 		std::vector<PseudoCommand> result;
 		const Token& type_token = left[type_index];
 		const Token& name_token = left[type_index + 1];
 
 		// Проверка типа
-		auto* type = state->FindType(type_token.value.strVal);
+		auto* type = es.state->FindType(type_token.value.strVal);
 		if (!type) {
 			Logger::Get().PrintTypeError("Type \"" + type_token.value.strVal + "\" doesn't exist", type_token.line);
 			return result;
 		}
 
 		// Проверка на повторное объявление
-		if (state->GetCurrentSpace()->variables_table.IsExists(name_token.value.strVal)) {
+		if (es.state->GetCurrentSpace()->variables_table.IsExists(name_token.value.strVal)) {
 			Logger::Get().PrintLogicError("Redeclaring variable \"" + name_token.value.strVal + "\"", name_token.line);
 			return result;
 		}
 
 		// Добавляем переменную в таблицу
 		Variable var(name_token.value.strVal, type->type_id, is_const);
-		state->AddVariableToSpace(state->GetCurrentSpace()->vfid,var);
+		es.state->AddVariableToSpace(es.state->GetCurrentSpace()->vfid,var);
 
 		// Генерируем команду объявления
 		PseudoCommand declare_cmd(PseudoOpCode::DeclareVariable);
@@ -282,18 +282,27 @@ namespace Malachite
 		result.push_back(declare_cmd);
 
 		// Генерируем команду сохранения (значение уже в стеке от правой части)
-		PseudoCommand store_cmd(PseudoOpCode::Store);		//или LOAD ARITHMETIC_OPER STORE 
+
+		PseudoOpCode store_code = SyntaxInfo::GetOperationFromComplexAssign(es.assign_token.value.strVal);
+		if (store_code != PseudoOpCode::Store) 
+		{
+			Logger::Get().PrintLogicError("Declaring variable \"" + name_token.value.strVal + "\" with complex assign is incorrect.", name_token.line);
+			return result;
+		}
+		PseudoCommand store_cmd(store_code);		
 		store_cmd.parameters[PseudoCodeInfo::Get().variableID_name] = var.variable_id;
 		result.push_back(store_cmd);
 
 		return result;
 	}
-	std::vector<PseudoCommand> ExpressionDecoder::HandleVariableAssignment(const Token& var_name, bool is_const, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::HandleVariableAssignment(const Token& var_name, bool is_const, ExpressionState& es)
 	{
 		std::vector<PseudoCommand> result;
 
+		es.load_assign_operation = PseudoCommand();
+
 		// Проверка существования переменной
-		auto* variable = state->FindVariable(var_name.value.strVal);
+		auto* variable = es.state->FindVariable(var_name.value.strVal);
 		if (!variable) {
 			Logger::Get().PrintTypeError("Variable \"" + var_name.value.strVal + "\" is not declared", var_name.line); 
 			return result;
@@ -305,32 +314,58 @@ namespace Malachite
 			Logger::Get().PrintTypeError("Variable \"" + var_name.value.strVal + "\" is constant", var_name.line); 
 			return result;
 		}
+		PseudoOpCode store_code = SyntaxInfo::GetOperationFromComplexAssign(es.assign_token.value.strVal);
+		if (store_code == PseudoOpCode::Nop)
+		{
+			Logger::Get().PrintLogicError("Incorrect assign.", es.assign_token.line);
+			return result;
+		}
+		else if (store_code == PseudoOpCode::Store) 
+		{
+			PseudoCommand store_cmd(PseudoOpCode::Store);
+			store_cmd.parameters[PseudoCodeInfo::Get().variableID_name] = variable->variable_id;
+			result.push_back(store_cmd);
+		}
+		else 
+		{
+			PseudoCommand ari_cmd(store_code);	//arithmetic
+			result.push_back(ari_cmd);
+			PseudoCommand store_cmd(PseudoOpCode::Store);
+			store_cmd.parameters[PseudoCodeInfo::Get().variableID_name] = variable->variable_id;
+			result.push_back(store_cmd);
 
-		PseudoCommand store_cmd(PseudoOpCode::Store);
-		store_cmd.parameters[PseudoCodeInfo::Get().variableID_name] = variable->variable_id;
-		result.push_back(store_cmd);
+			es.load_assign_operation = PseudoCommand(PseudoOpCode::Load, { {PseudoCodeInfo::Get().variableID_name,variable->variable_id} });
+
+		}
 
 		return result;
 	}
 
-	std::vector<PseudoCommand> ExpressionDecoder::ProcessRightSide(const std::vector<Token>& right, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::ProcessRightSide(const std::vector<Token>& right, ExpressionState& es)
 	{
 		std::vector<TokensGroup> tgs = ToPostfixForm(right);
 
 
-		return PostfixToPseudo(tgs,state);
+		return PostfixToPseudo(tgs,es);
 	}
 
-	std::vector<PseudoCommand> ExpressionDecoder::DecodeAssignExpression(const std::vector<Token>& left, const std::vector<Token>& right, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> ExpressionDecoder::DecodeAssignExpression(const std::vector<Token>& left, const std::vector<Token>& right, ExpressionState& es)
 	{
 		std::vector<PseudoCommand> result;
 
 		// 1. Обрабатываем правую часть (значение)
-		std::vector<PseudoCommand> right_commands = ProcessRightSide(right, state);
-		result.insert(result.end(), right_commands.begin(), right_commands.end());
+		std::vector<PseudoCommand> right_commands = ProcessRightSide(right, es);
+		
 
 		// 2. Обрабатываем левую часть (куда сохранять)
-		std::vector<PseudoCommand> left_commands = ProcessLeftSide(left, state);
+		std::vector<PseudoCommand> left_commands = ProcessLeftSide(left, es);
+
+		if (es.load_assign_operation.op_code != PseudoOpCode::Nop) 
+		{
+			result.push_back(es.load_assign_operation);
+			es.load_assign_operation = PseudoCommand();
+		}
+	    result.insert(result.end(), right_commands.begin(), right_commands.end());
 		result.insert(result.end(), left_commands.begin(), left_commands.end());
 
 		return result;
@@ -338,7 +373,9 @@ namespace Malachite
 	std::vector<PseudoCommand> ExpressionDecoder::DecodeExpression(const std::vector<Token>& tokens, std::shared_ptr<CompilationState> state)
 	{
 		std::vector<PseudoCommand> result;
-
+		ExpressionState es;
+		es.state = state;
+		
 		std::vector<Token> temp_tokens;
 		for (size_t i = 0; i < tokens.size(); i++)
 		{
@@ -368,8 +405,9 @@ namespace Malachite
 
 			if (t.type == TokenType::OPERATOR && SyntaxInfo::GetOperationPriority(t) == -1)
 			{
+				es.assign_token = t;
 				std::vector<Token> right = StringOperations::TrimVector<Token>(tokens, i + 1, tokens.size() - 1);
-				result = DecodeAssignExpression(temp_tokens, right, state);
+				result = DecodeAssignExpression(temp_tokens, right, es);
 				temp_tokens.clear();
 				break;
 			}
@@ -378,7 +416,7 @@ namespace Malachite
 		}
 		if (!temp_tokens.empty())
 		{
-			std::vector<PseudoCommand> commands = ProcessRightSide(temp_tokens, state);
+			std::vector<PseudoCommand> commands = ProcessRightSide(temp_tokens, es);
 			result.insert(result.end(), commands.begin(), commands.end());
 		}
 		return result;
