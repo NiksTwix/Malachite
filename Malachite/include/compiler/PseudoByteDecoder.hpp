@@ -7,19 +7,20 @@ namespace Malachite
 	class PseudoByteDecoder 
 	{
 	private:
-		std::shared_ptr<CompilationState> compilation_state = nullptr;
-		std::vector<PseudoCommand> RecursiveHandle(const ASTNode& node);
+		std::vector<PseudoCommand> RecursiveHandle(const ASTNode& node, std::shared_ptr<CompilationState> state);
 		
 		//---Basic syntax structs
 
-		std::vector<PseudoCommand> HandleBasicSyntax(const ASTNode& node);	//Checks node header content and choouses special method for current node
+		std::vector<PseudoCommand> HandleBasicSyntax(const ASTNode& node, std::shared_ptr<CompilationState> state);	//Checks node header content and choouses special method for current node
 
-		std::vector<PseudoCommand> ParseConditionBlock(const ASTNode& node);	//if elif else
+		std::vector<PseudoCommand> ParseConditionBlock(const ASTNode& node, std::shared_ptr<CompilationState> state);	//if elif else
 
-		std::vector<PseudoCommand> ParseOpCodeBlock(const ASTNode& node);	//op_code
+		std::vector<PseudoCommand> ParseOpCodeBlock(const ASTNode& node, std::shared_ptr<CompilationState> state);	//op_code
 
-		std::vector<PseudoCommand> ParseWhileBlock(const ASTNode& node);		//while cycle
-		std::vector<PseudoCommand> ParseForBlock(const ASTNode& node);			//for cycle
+		std::vector<PseudoCommand> ParseWhileBlock(const ASTNode& node, std::shared_ptr<CompilationState> state);		//while cycle
+		std::vector<PseudoCommand> ParseForBlock(const ASTNode& node, std::shared_ptr<CompilationState> state);			//for cycle
+
+		std::vector<PseudoCommand> ParseCycles(const ASTNode& node, std::shared_ptr<CompilationState> state);			//for cycle
 
 		ExpressionDecoder ex_decoder;
 	public:

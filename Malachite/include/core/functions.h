@@ -149,7 +149,6 @@ namespace MalachiteCore
 			// command->source0 = регистр-источник
 
 			state->sp -= command->destination;  // сдвигаем SP на размер данных
-
 			// Записываем данные из регистра в стек
 			for (int i = 0; i < command->destination; i++) {
 				uint8_t byte = (state->registers[command->source0].u >> (i * 8)) & 0xFF;
@@ -172,6 +171,7 @@ namespace MalachiteCore
 			state->registers[command->destination].u = value;
 
 			state->sp += command->source0;  // сдвигаем SP обратно
+
 			break;
 		}
 		case OpCode::OP_LOAD_LOCAL:

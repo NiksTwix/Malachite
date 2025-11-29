@@ -227,7 +227,7 @@ namespace Malachite
 			const Token& t = left[i];
 
 			// Проверка на const
-			if (t.type == TokenType::KEYWORD && t.value.strVal == "const") {
+			if (t.type == TokenType::KEYWORD && t.value.strVal == SyntaxInfoKeywords::Get().keyword_const) {
 				is_const = true;
 				continue;
 			}

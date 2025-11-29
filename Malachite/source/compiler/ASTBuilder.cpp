@@ -70,7 +70,7 @@ namespace Malachite
 						(!group_of_nodes.empty() && SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::START &&
 							SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::MIDDLE))
 					{
-						Logger::Get().PrintLogicError("Condition block without start command \"if\" or middle command \"elif\".", child_node.line);
+						Logger::Get().PrintLogicError("Condition block without start command \"" + SyntaxInfoKeywords::Get().keyword_if + "\" or middle command \"" + SyntaxInfoKeywords::Get().keyword_elif + "\".", child_node.line);
 						break;
 					}
 					//Push elif block as middle
@@ -82,7 +82,7 @@ namespace Malachite
 						(!group_of_nodes.empty() && SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::START &&
 							SyntaxInfo::GetCondtionBlockPartType(group_of_nodes.back().tokens[0].value.strVal) != SyntaxInfo::ConditionBlockParType::MIDDLE))
 					{
-						Logger::Get().PrintLogicError("Condition block without start command \"if\" or middle command \"elif\".", child_node.line);
+						Logger::Get().PrintLogicError("Condition block without start command \"" + SyntaxInfoKeywords::Get().keyword_if + "\" or middle command \"" + SyntaxInfoKeywords::Get().keyword_elif + "\".", child_node.line);
 						break;
 					}
 					//Push else block as end

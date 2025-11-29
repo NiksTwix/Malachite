@@ -282,6 +282,36 @@ namespace Malachite
         std::unordered_map<std::string, TokenValue> parameters{}; //Example,  op_code: DeclareVariable, parameters: name-"x"
     };
 
+    struct SyntaxInfoKeywords 
+    {
+        const std::string keyword_if        = "if";
+        const std::string keyword_elif      = "elif";
+        const std::string keyword_else      = "else";
+        const std::string keyword_while     = "while";
+        const std::string keyword_for       = "for";
+        const std::string keyword_for_math  = "for_m";
+        const std::string keyword_loop      = "loop";
+        const std::string keyword_continue  = "continue";
+        const std::string keyword_break     = "break";
+        const std::string keyword_func      = "func";
+        const std::string keyword_return    = "return";
+        const std::string keyword_op_code   = "op_code";
+        const std::string keyword_import    = "import";
+        const std::string keyword_meta      = "meta";
+        const std::string keyword_class     = "class";
+        const std::string keyword_alias     = "alias";
+        const std::string keyword_new       = "new";
+        const std::string keyword_delete    = "delete";
+        const std::string keyword_namespace = "namespace";
+        const std::string keyword_const     = "const";
+
+        static SyntaxInfoKeywords& Get() 
+        {
+            static SyntaxInfoKeywords keywords;
+            return keywords;
+        }
+
+    }; 
 
     class SyntaxInfo 
     {
@@ -341,24 +371,26 @@ namespace Malachite
                 {"uint", TokenType::TYPE_MARKER},
 				{"float", TokenType::TYPE_MARKER},		//double
 				{"void", TokenType::TYPE_MARKER},
-				{"if", TokenType::KEYWORD},
-				{"elif", TokenType::KEYWORD},
-				{"else", TokenType::KEYWORD},
-				{"while", TokenType::KEYWORD},
-				{"for", TokenType::KEYWORD},
-				{"continue", TokenType::KEYWORD},
-				{"break", TokenType::KEYWORD},
-				{"func", TokenType::KEYWORD},
-				{"return", TokenType::KEYWORD},
-				{"op_code",TokenType::KEYWORD},
-				{"import",TokenType::KEYWORD},
-				{"meta",TokenType::KEYWORD},
-				{"class",TokenType::KEYWORD},
-				{"alias",TokenType::KEYWORD},
-				{"new",TokenType::KEYWORD},
-                {"delete",TokenType::KEYWORD},
-                {"namespace",TokenType::KEYWORD},
-                {"const",TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_if, TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_elif, TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_else, TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_while, TokenType::KEYWORD},
+                {SyntaxInfoKeywords::Get().keyword_for, TokenType::KEYWORD},
+                {SyntaxInfoKeywords::Get().keyword_loop, TokenType::KEYWORD},
+                {SyntaxInfoKeywords::Get().keyword_for_math, TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_continue, TokenType::KEYWORD},
+                {SyntaxInfoKeywords::Get().keyword_break, TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_func, TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_return, TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_op_code,TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_import,TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_meta,TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_class,TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_alias,TokenType::KEYWORD},
+				{SyntaxInfoKeywords::Get().keyword_new,TokenType::KEYWORD},
+                {SyntaxInfoKeywords::Get().keyword_delete,TokenType::KEYWORD},
+                {SyntaxInfoKeywords::Get().keyword_namespace,TokenType::KEYWORD},
+                {SyntaxInfoKeywords::Get().keyword_const,TokenType::KEYWORD},
             };
             return tokensMap;
         }
@@ -631,11 +663,7 @@ namespace Malachite
             return map.count(code) ? map[code] : SIZE_MAX;
         }
 
-        static std::unordered_set<std::string> GetOpCodeRegistersList() 
-        {
-            static std::unordered_set<std::string> opCodeRegisters = { "RA","RB","RC","RD","RE","RF","RG","RH" };
-            return opCodeRegisters;
-        }
+
 
         static PseudoOpCode GetOperationFromComplexAssign(const std::string& code)
         {
@@ -665,14 +693,23 @@ namespace Malachite
         
         static ConditionBlockParType GetCondtionBlockPartType(const std::string& token_str) 
         {
-            if (token_str == "if") return ConditionBlockParType::START;
-            if (token_str == "elif") return ConditionBlockParType::MIDDLE;
-            if (token_str == "else") return ConditionBlockParType::END;
+            if (token_str == SyntaxInfoKeywords::Get().keyword_if) return ConditionBlockParType::START;
+            if (token_str == SyntaxInfoKeywords::Get().keyword_elif) return ConditionBlockParType::MIDDLE;
+            if (token_str == SyntaxInfoKeywords::Get().keyword_else) return ConditionBlockParType::END;
 
             return ConditionBlockParType::NOTHING;
         }
 
-
+        static std::unordered_set<std::string> GetOpCodeRegistersList()
+        {
+            static std::unordered_set<std::string> opCodeRegisters = { "RA","RB","RC","RD","RE","RF","RG","RH" };
+            return opCodeRegisters;
+        }
+        static std::unordered_set<std::string> GetLoopsList()
+        {
+            static std::unordered_set<std::string> LoopsList = { SyntaxInfoKeywords::Get().keyword_loop,SyntaxInfoKeywords::Get().keyword_while,SyntaxInfoKeywords::Get().keyword_for,SyntaxInfoKeywords::Get().keyword_for_math};
+            return LoopsList;
+        }
         
     };
 

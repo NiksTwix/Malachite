@@ -21,7 +21,7 @@ namespace Malachite
 			int depth = -1;
 		};
 
-		std::unordered_set<std::string> scope_exceptions = { "func","op_code","class","user_type" };	//ќбъ€влени€, в блоках кода которых не надо ставить автоматический SCOPE
+		std::unordered_set<std::string> scope_exceptions = { SyntaxInfoKeywords::Get().keyword_func,SyntaxInfoKeywords::Get().keyword_op_code,SyntaxInfoKeywords::Get().keyword_class,SyntaxInfoKeywords::Get().keyword_alias};	//ќбъ€влени€, в блоках кода которых не надо ставить автоматический SCOPE
 
 		int current_depth = 0;
 

@@ -11,14 +11,14 @@ using namespace MalachiteCore;
 int main()
 {
 	std::string code = R"CODE(
-	int x = 2000;
-	
-	x += 5004
-
-	op_code
+	int x = 100
 	{
-		LOAD_RV RA, x
-		OP_SYSTEM_CALL PRINT_INT, RA
+		x += 2100
+		op_code
+		{
+			LOAD_RV RA,x
+			OP_SYSTEM_CALL PRINT_INT, RA
+		}
 	}
 
 )CODE";
