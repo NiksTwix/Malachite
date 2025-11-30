@@ -11,7 +11,7 @@ using namespace MalachiteCore;
 int main()
 {
 	std::string code = R"CODE(
-	int x = 100
+	uint x = -100
 	{
 		x += 2100
 		op_code

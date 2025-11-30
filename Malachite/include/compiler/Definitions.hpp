@@ -29,6 +29,7 @@ namespace Malachite
         METHOD_CALL,     //For class.method(params)
 
         NODES_GROUP,
+        EXCEPT_HANDLING,    //Command is except handling 
 
     };
 
@@ -197,7 +198,7 @@ namespace Malachite
     {
         //Stack principe: lower value is left, higher is right
         Nop,
-
+        ExceptHandling, //Compilation command
         START_SECTION_MEMORY_OPS,
 
         Immediate,          // Push literal contant
@@ -282,14 +283,14 @@ namespace Malachite
         std::unordered_map<std::string, TokenValue> parameters{}; //Example,  op_code: DeclareVariable, parameters: name-"x"
     };
 
-    struct SyntaxInfoKeywords 
+    struct SyntaxInfoKeywords //If want custom keywords on russian - use koi-8
     {
         const std::string keyword_if        = "if";
         const std::string keyword_elif      = "elif";
         const std::string keyword_else      = "else";
         const std::string keyword_while     = "while";
         const std::string keyword_for       = "for";
-        const std::string keyword_for_math  = "for_m";
+        const std::string keyword_for_math  = "forint";
         const std::string keyword_loop      = "loop";
         const std::string keyword_continue  = "continue";
         const std::string keyword_break     = "break";
@@ -304,6 +305,16 @@ namespace Malachite
         const std::string keyword_delete    = "delete";
         const std::string keyword_namespace = "namespace";
         const std::string keyword_const     = "const";
+
+        const std::string typemarker_int    = "int";
+        const std::string typemarker_uint   = "uint";
+        const std::string typemarker_float  = "float";
+        const std::string typemarker_bool   = "bool";
+        const std::string typemarker_char   = "char";
+        const std::string typemarker_void   = "void";
+
+        const std::string literal_true      = "true";
+        const std::string literal_false     = "false";
 
         static SyntaxInfoKeywords& Get() 
         {
@@ -353,8 +364,8 @@ namespace Malachite
                 {"&=",TokenType::OPERATOR},
                 {"|=",TokenType::OPERATOR},
                 {"~=",TokenType::OPERATOR},
-				{"false", TokenType::LITERAL},
-				{"true", TokenType::LITERAL},
+				{SyntaxInfoKeywords::Get().literal_true, TokenType::LITERAL},
+				{SyntaxInfoKeywords::Get().literal_false, TokenType::LITERAL},
 				{"(", TokenType::DELIMITER},
 				{")", TokenType::DELIMITER},
 				{"{", TokenType::DELIMITER},
@@ -365,12 +376,12 @@ namespace Malachite
 				{",", TokenType::DELIMITER},
                 {".", TokenType::DELIMITER},
 				{";",TokenType::DELIMITER},
-				{"int", TokenType::TYPE_MARKER},		//int64
-                {"bool", TokenType::TYPE_MARKER},
-                {"char", TokenType::TYPE_MARKER},
-                {"uint", TokenType::TYPE_MARKER},
-				{"float", TokenType::TYPE_MARKER},		//double
-				{"void", TokenType::TYPE_MARKER},
+				{SyntaxInfoKeywords::Get().typemarker_int, TokenType::TYPE_MARKER},		//int64
+                {SyntaxInfoKeywords::Get().typemarker_uint, TokenType::TYPE_MARKER},    //uint64
+                {SyntaxInfoKeywords::Get().typemarker_float, TokenType::TYPE_MARKER},   //double
+                {SyntaxInfoKeywords::Get().typemarker_char, TokenType::TYPE_MARKER},
+				{SyntaxInfoKeywords::Get().typemarker_bool, TokenType::TYPE_MARKER},		
+				{SyntaxInfoKeywords::Get().typemarker_void, TokenType::TYPE_MARKER},
 				{SyntaxInfoKeywords::Get().keyword_if, TokenType::KEYWORD},
 				{SyntaxInfoKeywords::Get().keyword_elif, TokenType::KEYWORD},
 				{SyntaxInfoKeywords::Get().keyword_else, TokenType::KEYWORD},
@@ -726,8 +737,9 @@ namespace Malachite
         const std::string labelMark_name = "Mark";
         const std::string sectionName_name = "SectionName";
 
+        const std::string flag_name = "Flag";
+
         const std::string opcodeCommandCode_name = "OpCode";
-        
         const std::string opcodeDestination_name = "Destination";
         const std::string opcodeSource0_name = "Source0";
         const std::string opcodeSource1_name = "Source1";

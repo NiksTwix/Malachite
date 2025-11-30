@@ -165,6 +165,13 @@ namespace Malachite
 				}
 				if (t.type == TokenType::OPERATOR) result.push_back(PseudoCommand(SyntaxInfo::GetOperatorPseudoCode(t)));
 				if (t.type == TokenType::LITERAL) result.push_back(PseudoCommand(PseudoOpCode::Immediate, { {PseudoCodeInfo::Get().valueID_name, t.value } }));
+
+				if (t.type == TokenType::KEYWORD) 
+				{
+					if (t.value.strVal == SyntaxInfoKeywords::Get().keyword_continue || t.value.strVal == SyntaxInfoKeywords::Get().keyword_break) {
+						result.push_back(PseudoCommand(PseudoOpCode::ExceptHandling, {{PseudoCodeInfo::Get().valueID_name, t.value} }));
+					}
+				}
 			}
 			else // Complex
 			{
@@ -231,7 +238,7 @@ namespace Malachite
 				is_const = true;
 				continue;
 			}
-
+			// Проверка на notgc
 			// Объявление переменной: "int x"
 			if (t.type == TokenType::TYPE_MARKER && i + 1 < left.size() &&
 				left[i + 1].type == TokenType::IDENTIFIER)

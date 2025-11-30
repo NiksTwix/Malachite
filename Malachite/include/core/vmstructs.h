@@ -3,7 +3,7 @@
 
 namespace MalachiteCore 
 {
-    constexpr size_t REGISTER_COUNT = 255;//255;
+    constexpr size_t REGISTER_COUNT = 127;// 0-127
     constexpr uint8_t REGISTER_SIZE = sizeof(uint64_t);
     constexpr size_t CALL_STACK_SIZE = 256;
 

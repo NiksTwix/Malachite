@@ -4,14 +4,68 @@
 
 namespace Malachite 
 {
-	std::vector<PseudoCommand> PseudoByteDecoder::ParseForBlock(const ASTNode& node, std::shared_ptr<CompilationState> state)
+	std::vector<PseudoCommand> PseudoByteDecoder::ParseForBlock(const ASTNode& node, std::shared_ptr<CompilationState> state)	//foreach and forint will be in individual handlers
 	{
-		bool math_mode = node.tokens[0].value.strVal == SyntaxInfoKeywords::Get().keyword_for_math;
+		std::vector<PseudoCommand> commands;
+		if (node.tokens.size() < 7){Logger::Get().PrintSyntaxError("Invalid for cycle. Invalid cycle's structure.", node.tokens[0].line); return commands;}
+		std::vector<std::vector<Token>> args;
+		args.push_back({});
+		int arg_index = 0;
+		int depth = 0;
 
+		Token variable = node.tokens[1];
+		if (variable.type != TokenType::IDENTIFIER) {Logger::Get().PrintSyntaxError("Invalid for cycle. Invalid or missed cycle's variable \"" + variable.value.strVal + "\"", node.tokens[0].line); return commands;}
+		for (size_t i = 0; i < node.tokens.size(); i++) 
+		{
+			Token t = node.tokens[i];
+			if (t.type == TokenType::DELIMITER) 
+			{
+				if (t.value.strVal == "(") {depth++;continue;}
+				else if (t.value.strVal == ")") {depth--;if (depth == 0) break;}
+				if (t.value.strVal == ",") 
+				{
+					if (depth == 0) { Logger::Get().PrintSyntaxError("Invalid for cycle. Delimiter ',' is outside.", node.tokens[0].line); return commands; }
+					else if (depth == 1){args.push_back({});arg_index++;continue;}
+				}
+			}
+			if (depth > 0)args[arg_index].push_back(t);
+		}
+		if (args.size() < 2) { Logger::Get().PrintSyntaxError("Invalid for cycle. Invalid cycle's args.", node.tokens[0].line); return; }
+		if (args.size() == 2) args.push_back({ Token(TokenType::LITERAL, (int64_t)1) });	//Set default step
 
+		//Labels
+		std::string label_for_check = StringOperations::GenerateLabel("#for_check");
+		std::string label_for_add = StringOperations::GenerateLabel("#for_add");
+		std::string label_for_end = StringOperations::GenerateLabel("#for_end");
+		std::string label_for_body = StringOperations::GenerateLabel("#for_body");
+		std::string label_for_greater = StringOperations::GenerateLabel("#for_greater");
+
+		auto start = ex_decoder.DecodeExpression(args[0],state);
+		auto end = ex_decoder.DecodeExpression(args[1], state);
+		auto step = ex_decoder.DecodeExpression(args[2], state);
+
+		/*
+			We need to take over the registration, so we don't know the data value in advance. And then we'll retrieve it.
+			Four new pseudo commands:
+			1) ExceptHandling (for continue and break), recursion is the power!
+			2) SaveToRegisterWithPseudonym - parameters: pseudonym -> bytedecoder allocate's register (if not allocated) and create's (if not created) a writting {pseudonym, register_number} 
+			and save's value from value_stack -> value.used_register = pseudonym::register_number! <---------------------- change's used_register
+			3) ReleaseRegisterWithPseudonym - parameters: pseudonym -> bytedecoder release's and delete's the writting {pseudonym, register_number}
+			4) LoadFromRegisterWithPseudonym - parameters: pseudonym -> bytedecoder load's data from register to value_stack
+		*/
 
 		return std::vector<PseudoCommand>();
 	}
+
+
+
+
+
+
+
+
+
+
 	std::vector<PseudoCommand> PseudoByteDecoder::ParseCycles(const ASTNode& node, std::shared_ptr<CompilationState> state)
 	{
 		std::vector<PseudoCommand> result;
@@ -23,10 +77,11 @@ namespace Malachite
 		{
 			//while handling
 		}
-		else if (node.tokens[0].value.strVal == SyntaxInfoKeywords::Get().keyword_for || node.tokens[0].value.strVal == SyntaxInfoKeywords::Get().keyword_for_math)
+		else if (node.tokens[0].value.strVal == SyntaxInfoKeywords::Get().keyword_for)
 		{
 			result = ParseForBlock(node, state);
 		}
+		// node.tokens[0].value.strVal == SyntaxInfoKeywords::Get().keyword_for_math
 		return result;
 	}
 	std::pair<std::shared_ptr<CompilationState>, std::vector<PseudoCommand>> PseudoByteDecoder::GeneratePseudoCode(const ASTNode& node)

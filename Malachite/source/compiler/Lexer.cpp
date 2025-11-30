@@ -65,8 +65,8 @@ namespace Malachite
 	}
 	TokenValue Lexer::GetTokenValue(const std::string& token)		//Транслирует в строки/цифры и тд
 	{
-		if (token == "true") return true;
-		else if (token == "false") return false;
+		if (token == SyntaxInfoKeywords::Get().literal_true) return true;
+		else if (token == SyntaxInfoKeywords::Get().literal_false) return false;
 
 		if (StringOperations::IsNumber(token))	//TODO type management
 		{
