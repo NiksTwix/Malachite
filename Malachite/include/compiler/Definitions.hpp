@@ -20,8 +20,8 @@ namespace Malachite
     enum class CompilationLabel : uint8_t
     {
         OPERATION_END = 0,  //End of operation
-        SCOPE_START,    //Start of variable scope
-        SCOPE_END,      //End of variable scope
+        OPEN_VISIBLE_SCOPE,    //Start of variable scope
+        CLOSE_VISIBLE_SCOPE,      //End of variable scope
         FUNCTION_CALL,  //function(params)
         OFFSET_ACCESS,  //array[index]
 
@@ -29,7 +29,6 @@ namespace Malachite
         METHOD_CALL,     //For class.method(params)
 
         NODES_GROUP,
-        EXCEPT_HANDLING,    //Command is except handling 
 
     };
 
@@ -219,13 +218,14 @@ namespace Malachite
 
 
         //Debug
-        ScopeStart,
-        ScopeEnd,
+        OpenVisibleScope,
+        CloseVisibleScope,
+        CloseVisibleScopes,  //Close visible scope n times -> ByteDecoder insert DestroyFrame n times) 
 
         //Declaring
         START_SECTION_DECLARING_OPS,
         DeclareVariable,    //Declaring of variable, parameters are name and vm_type (double/int64/uint64), but creating writting in variable table with fact type (string and another)
-        DeclareFunction,    //Declaring of function, parameters are name and return type_id, code after DeclareFunction and ScopeStart is function body.
+        DeclareFunction,    //Declaring of function, parameters are name and return type_id, code after DeclareFunction and OpenVisibleScope is function body.
         DeclareFunctionEnd,
         END_SECTION_DECLARING_OPS,
         //Arithmetic
@@ -264,12 +264,20 @@ namespace Malachite
         Return,
         END_SECTION_CONTROL_FLOW_OPS,
 
+        START_SECTION_OP_CODE_OPS,
         OpCodeStart,
         OpCodeAllocateBasicRegisters,    //RA-RH, for byte decoder!
         OpCodeCommand,     //In parameters: OP_CODE, destination, source0,source1
         OpCodeStoreVR,
         OpCodeLoadRV,
         OpCodeEnd,
+        END_SECTION_OP_CODE_OPS,
+
+        START_SECTION_SPECIAL_OPS,
+        SaveToRegisterWithPseudonym,
+        LoadFromRegisterWithPseudonym,
+        ReleaseRegisterWithPseudonym,
+        END_SECTION_SPECIAL_OPS,
 
         //System calls ->  welcome to op_code {...}
 
@@ -490,8 +498,9 @@ namespace Malachite
                 {PseudoOpCode::LoadDirect, "LoadDirect"},
                 {PseudoOpCode::StoreDirect, "StoreDirect"},
                 {PseudoOpCode::GetAddress, "GetAddress"},
-                {PseudoOpCode::ScopeStart, "ScopeStart"},
-                {PseudoOpCode::ScopeEnd, "ScopeEnd"},
+                {PseudoOpCode::OpenVisibleScope, "OpenVisibleScope"},
+                {PseudoOpCode::CloseVisibleScope, "CloseVisibleScope"},
+                {PseudoOpCode::CloseVisibleScopes, "CloseVisibleScopes"},
                 {PseudoOpCode::Label, "Label"},
                 {PseudoOpCode::DeclareVariable, "DeclareVariable"},
                 {PseudoOpCode::DeclareFunction, "DeclareFunction"},
@@ -526,6 +535,9 @@ namespace Malachite
                 {PseudoOpCode::OpCodeLoadRV, "OpCodeLoadRV"},
                 {PseudoOpCode::OpCodeCommand, "OpCodeCommand"},
                 {PseudoOpCode::OpCodeAllocateBasicRegisters, "OpCodeAllocateBasicRegisters"},
+                {PseudoOpCode::SaveToRegisterWithPseudonym, "SaveToRegisterWithPseudonym"},
+                {PseudoOpCode::LoadFromRegisterWithPseudonym, "LoadFromRegisterWithPseudonym"},
+                {PseudoOpCode::ReleaseRegisterWithPseudonym, "ReleaseRegisterWithPseudonym"},
             };
 
             return PseudoOpCodeToString;
@@ -576,6 +588,7 @@ namespace Malachite
                 {MalachiteCore::OP_MOV_RI_DOUBLE, "OP_MOV_RI_DOUBLE"},
                 {MalachiteCore::OP_CREATE_FRAME, "OP_CREATE_FRAME"},
                 {MalachiteCore::OP_DESTROY_FRAME, "OP_DESTROY_FRAME"},
+                {MalachiteCore::OP_DESTROY_FRAMES, "OP_DESTROY_FRAMES"},
                 {MalachiteCore::OP_PUSH, "OP_PUSH"},
                 {MalachiteCore::OP_POP, "OP_POP"},
                 {MalachiteCore::OP_LOAD_LOCAL, "OP_LOAD_LOCAL"},
@@ -736,6 +749,8 @@ namespace Malachite
         const std::string labelID_name = "ID";
         const std::string labelMark_name = "Mark";
         const std::string sectionName_name = "SectionName";
+
+        const std::string pseudonym_name = "Pseudonym";
 
         const std::string flag_name = "Flag";
 

@@ -40,7 +40,7 @@ namespace Malachite
 					right.used_register
 				));
 
-				current_BDS.regsTable.Release(right.used_register);
+				current_BDS.registers_table.Release(right.used_register);
 				current_BDS.value_stack.push(ValueFrame(left.used_register, common_type));
 			};
 
@@ -100,7 +100,7 @@ namespace Malachite
 				right.used_register
 			));
 
-			current_BDS.regsTable.Release(right.used_register);
+			current_BDS.registers_table.Release(right.used_register);
 			current_BDS.value_stack.push(ValueFrame(left.used_register, common_type));
 			break;
 		}
@@ -149,7 +149,7 @@ namespace Malachite
 					right.used_register
 				));
 
-				current_BDS.regsTable.Release(right.used_register);
+				current_BDS.registers_table.Release(right.used_register);
 				current_BDS.value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//bool 0,1
 			};
 		auto main_cmp_handler = [&](uint32_t flag) -> void
@@ -184,7 +184,7 @@ namespace Malachite
 					left.used_register,
 					flag
 				));
-				current_BDS.regsTable.Release(right.used_register);
+				current_BDS.registers_table.Release(right.used_register);
 				current_BDS.value_stack.push(ValueFrame(left.used_register, Type::VMAnalog::UINT));	//flag 0,1
 			};
 		switch (cmd.op_code)
@@ -285,7 +285,7 @@ namespace Malachite
 				//Free allocated registers
 				for (auto& reg : registers) 
 				{
-					current_BDS.regsTable.Release(reg.second);
+					current_BDS.registers_table.Release(reg.second);
 				}
 				registers.clear();
 				ended = true;
@@ -295,7 +295,7 @@ namespace Malachite
 			{
 				for (std::string reg: SyntaxInfo::GetOpCodeRegistersList())
 				{
-					uint64_t reg_number = current_BDS.regsTable.Allocate();
+					uint64_t reg_number = current_BDS.registers_table.Allocate();
 					if (reg_number == InvalidRegister) 
 					{
 						Logger::Get().PrintTypeError("Basic registers hasnt allocated. Register's table hasn't free registers.", ip);
@@ -412,6 +412,95 @@ namespace Malachite
 
 		return result;
 	}
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleSpecialCommands(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	{
+		std::vector<MalachiteCore::VMCommand> result;
+		PseudoCommand cmd = cmds[ip];
+		switch (cmd.op_code)
+		{
+			case PseudoOpCode::SaveToRegisterWithPseudonym:
+			{
+				if (!cmd.parameters.count(PseudoCodeInfo::Get().pseudonym_name))
+				{
+					Logger::Get().PrintLogicError("SaveToRegisterWithPseudonym doesnt have a parameter \"" + PseudoCodeInfo::Get().pseudonym_name + "\".", ip);
+					return result;
+				}
+				if (current_BDS.value_stack.empty())
+				{
+					Logger::Get().PrintLogicError("SaveToRegisterWithPseudonym cant get value from value stack(empty).", ip);
+					return result;
+				}
+				auto& pseudonym = cmd.parameters[PseudoCodeInfo::Get().pseudonym_name].strVal;
+				if (!current_BDS.registers_table.pseudonymized_registers.count(pseudonym))
+				{
+					auto allocated_register = current_BDS.registers_table.Allocate();
+					if (allocated_register == InvalidRegister) {
+						// Обработка: нет свободных регистров
+						Logger::Get().PrintLogicError("No free registers for pseudonym.", ip);
+						return result;
+					}
+					current_BDS.registers_table.pseudonymized_registers.emplace(pseudonym,std::make_pair(allocated_register, ValueFrame()));//Create clear pair with pseudonym
+				}
+
+				auto allocated_register = current_BDS.registers_table.pseudonymized_registers[pseudonym].first;
+				ValueFrame frame = current_BDS.value_stack.top();
+				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RR, allocated_register, frame.used_register));
+				frame.used_register = allocated_register;
+				frame.value_source_type = ValueFrame::OPERATION_RESULT;
+				current_BDS.registers_table.pseudonymized_registers[pseudonym] = { allocated_register,frame };
+				
+				current_BDS.value_stack.pop();
+			}
+			break;
+			case PseudoOpCode::LoadFromRegisterWithPseudonym:
+			{
+				if (!cmd.parameters.count(PseudoCodeInfo::Get().pseudonym_name))
+				{
+					Logger::Get().PrintLogicError("LoadFromRegisterWithPseudonym doesnt have a parameter \"" + PseudoCodeInfo::Get().pseudonym_name + "\".", ip);
+					return result;
+				}
+				auto& pseudonym = cmd.parameters[PseudoCodeInfo::Get().pseudonym_name].strVal;
+				if (!current_BDS.registers_table.pseudonymized_registers.count(pseudonym))
+				{
+					Logger::Get().PrintLogicError("LoadFromRegisterWithPseudonym cant load value from pseudonymized register.", ip);
+					return result;
+				}
+				ValueFrame value_frame = current_BDS.registers_table.pseudonymized_registers[pseudonym].second;	//Copy
+				auto allocated_register_for_copy = current_BDS.registers_table.Allocate();
+				if (allocated_register_for_copy == InvalidRegister) {
+					// Обработка: нет свободных регистров
+					Logger::Get().PrintLogicError("No free registers for copy from pseudonymized register.", ip);
+					return result;
+				}
+				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RR, allocated_register_for_copy, value_frame.used_register));
+				value_frame.used_register = allocated_register_for_copy;
+				current_BDS.value_stack.push(value_frame);
+			}
+			break;
+			case PseudoOpCode::ReleaseRegisterWithPseudonym:
+			{
+				if (!cmd.parameters.count(PseudoCodeInfo::Get().pseudonym_name))
+				{
+					Logger::Get().PrintLogicError("ReleaseRegisterWithPseudonym doesnt have a parameter \"" + PseudoCodeInfo::Get().pseudonym_name + "\".", ip);
+					return result;
+				}
+				auto& pseudonym = cmd.parameters[PseudoCodeInfo::Get().pseudonym_name].strVal;
+				if (!current_BDS.registers_table.pseudonymized_registers.count(pseudonym))
+				{
+					Logger::Get().PrintLogicError("ReleaseRegisterWithPseudonym cant release pseudonymized.", ip);
+					return result;
+				}
+
+				uint64_t physical_register = current_BDS.registers_table.pseudonymized_registers[pseudonym].first;
+					
+				current_BDS.registers_table.Release(physical_register);
+
+				current_BDS.registers_table.pseudonymized_registers.erase(pseudonym);
+			}
+			break;
+		}
+		return result;
+	}
 	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
@@ -467,7 +556,7 @@ namespace Malachite
 						jump_ip,
 						left.used_register));
 				}
-				current_BDS.regsTable.Release(left.used_register);
+				current_BDS.registers_table.Release(left.used_register);
 			}
 			break;
 			case PseudoOpCode::JumpNotIf:
@@ -497,7 +586,7 @@ namespace Malachite
 						jump_ip,
 						left.used_register));
 				}
-				current_BDS.regsTable.Release(left.used_register);
+				current_BDS.registers_table.Release(left.used_register);
 			}
 			break;
 			case PseudoOpCode::Label:
@@ -535,7 +624,7 @@ namespace Malachite
 		case PseudoOpCode::Immediate:
 		{
 			TokenValue val = cmd.parameters[PseudoCodeInfo::Get().valueID_name];
-			auto free_register = current_BDS.regsTable.Allocate();
+			auto free_register = current_BDS.registers_table.Allocate();
 			if (free_register == InvalidRegister)
 			{
 				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
@@ -581,7 +670,7 @@ namespace Malachite
 			Variable& var = current_BDS.current_state->variables_global_table.at(cmd.parameters[PseudoCodeInfo::Get().variableID_name].uintVal);
 			Type& type = current_BDS.current_state->types_global_table.at(var.type_id);
 			auto info = current_BDS.variable_depth.at(var.variable_id);
-			auto free_register = current_BDS.regsTable.Allocate();
+			auto free_register = current_BDS.registers_table.Allocate();
 			if (free_register == InvalidRegister)
 			{
 				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
@@ -599,7 +688,7 @@ namespace Malachite
 				else //
 				{
 					uint64_t size_and_depth = size << 32;	//0...size -> size...0
-					size_and_depth |= info.depth;	//uint64_t and int64_t size...0 -> size...depth
+					size_and_depth |= info.depth;	
 					result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_LOAD_ENCLOSING_A, free_register, info.stack_offset, size_and_depth));
 				}
 				if (type.vm_analog == Type::VMAnalog::NONE)
@@ -654,11 +743,12 @@ namespace Malachite
 				}
 				else //
 				{
-					uint64_t size_and_depth = size << 32;	//0...size -> size...0
-					size_and_depth |= info.depth;	//uint64_t and int64_t size...0 -> size...depth
+					std::cout << var.name << "|" << info.stack_offset << "|" << info.depth << "|" << size << "|" << vf.used_register << "\n";
+					uint64_t size_and_depth = size << 32;	//0...size -> size...0 //uint64_t and int64_t size...0 -> size...depth
+					size_and_depth |= info.depth;	// depth -1 corrects ENCLOSING
 					result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_STORE_ENCLOSING_A, info.stack_offset, vf.used_register, size_and_depth));
 				}
-				current_BDS.regsTable.Release(vf.used_register);
+				current_BDS.registers_table.Release(vf.used_register);
 				return result;
 			}
 			else if (type.category == Type::Category::ALIAS)

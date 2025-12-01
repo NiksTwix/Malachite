@@ -116,7 +116,7 @@ namespace MalachiteCore
 			break;
 		}
 		case OpCode::OP_MOV_RR:
-			state->registers[command->destination] = state->registers[command->source0];
+			state->registers[command->destination].i = state->registers[command->source0].i;
 			break;
 		case OpCode::OP_MOV_RI_INT:
 			state->registers[command->destination].i = command->immediate.i;
@@ -143,9 +143,23 @@ namespace MalachiteCore
 			state->sp = df.sp;
 			break;
 		}
+		case OpCode::OP_DESTROY_FRAMES:
+		{
+			if (command->destination > state->data_stack.size()) {
+				return VMError::STACK_UNDERFLOW; // Early check
+			}
+			DataFrame last_df;
+			for (uint64_t i = 0; i < command->destination; i++) {
+				last_df = state->data_stack.pop();  // Запоминаем только последний
+			}
+
+			state->fp = last_df.fp;  // Восстанавливаем из ПОСЛЕДНЕГО
+			state->sp = last_df.sp;
+		}
+		break;
 		case OpCode::OP_PUSH: // dest-size(source0) source0-reg_from 
 		{
-			// command->destination = размер данных (1, 2, 4, 8 байт)
+			// command->destination = data's size (1, 2, 4, 8 bytes)
 			// command->source0 = регистр-источник
 
 			state->sp -= command->destination;  // сдвигаем SP на размер данных
@@ -225,12 +239,13 @@ namespace MalachiteCore
 
 			uint64_t size = size_and_depth >> 32;
 			uint64_t depth = size_and_depth & 0xFFFFFFFF;  //0b0000000000000000000000000000000011111111111111111111111111111111;
+			
 			// Находим нужный фрейм через data_stack
-			if (depth >= state->data_stack.size()) {
+			if (depth>= state->data_stack.size()) {
 				return VMError::STACK_UNDERFLOW;
 			}
 
-			const DataFrame& target_frame = state->data_stack.at(depth);
+			const DataFrame& target_frame = state->data_stack.at(depth);	
 			uint64_t target_fp = target_frame.fp;
 
 			// Проверяем границы стека для целевого фрейма
@@ -265,7 +280,6 @@ namespace MalachiteCore
 			if (depth >= state->data_stack.size()) {
 				return VMError::STACK_UNDERFLOW;
 			}
-
 			const DataFrame& target_frame = state->data_stack.at(depth);
 			uint64_t target_fp = target_frame.fp;
 

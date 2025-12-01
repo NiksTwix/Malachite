@@ -8,14 +8,52 @@
 namespace Malachite 
 {
 	constexpr size_t InvalidRegister = SIZE_MAX;
-    constexpr int64_t StartDepth = -1;
+    constexpr int64_t StartDepth = 0;
 
+    struct ValueFrame
+    {
+        enum ValueSourceType { IMMEDIATE, VARIABLE, OPERATION_RESULT };
+        enum ValueType { UINT, INT, DOUBLE };    //FLOAT(malachite syntax) = DOUBLE(c++)
+        uint64_t used_register = InvalidRegister;
+        TokenValue immediate_value = TokenValue((uint64_t)0);
+        variableID variable_id = InvalidRegister;
+        ValueSourceType value_source_type = ValueSourceType::IMMEDIATE;
+        Type::VMAnalog value_type = Type::VMAnalog::UINT;
+
+        ValueFrame()
+        {
+        }
+
+        ValueFrame(variableID var, uint64_t ur, Type::VMAnalog type = Type::VMAnalog::UINT)
+        {
+            variable_id = var;
+            value_source_type = ValueSourceType::VARIABLE;
+            used_register = ur;
+            value_type = type;
+        }
+        ValueFrame(TokenValue vaL, uint64_t ur, Type::VMAnalog type = Type::VMAnalog::UINT)
+        {
+            immediate_value = vaL;
+            value_source_type = ValueSourceType::IMMEDIATE;
+            used_register = ur;
+            value_type = type;
+        }
+        ValueFrame(uint64_t ur, Type::VMAnalog type = Type::VMAnalog::UINT)
+        {
+            value_source_type = ValueSourceType::OPERATION_RESULT;
+            used_register = ur;
+            value_type = type;
+        }
+    };
 	struct RegistersTable 
 	{
     private:
 		std::bitset<MalachiteCore::REGISTER_COUNT> registers{};	//0 is free, 1 is busy
 
     public:
+
+        std::unordered_map<std::string, std::pair<uint64_t, ValueFrame>> pseudonymized_registers;
+
         RegistersTable() = default;
 
         size_t Allocate() {
@@ -51,9 +89,21 @@ namespace Malachite
         }
 
         void Clear() {
-            registers.reset();
+            std::unordered_set<uint64_t> allocated_handle = {};
+            for (auto& p : pseudonymized_registers) 
+            {
+                allocated_handle.insert(p.second.first);
+            }
+            for (size_t i = 0; i < MalachiteCore::REGISTER_COUNT; i++) {
+                if (registers.test(i) && !allocated_handle.count(i)) {
+                    registers.reset(i);
+                }
+            }
         }
-
+        void FullClear() {
+            registers.reset();
+            pseudonymized_registers.clear();
+        }
         void DebugPrint() const {
             std::cout << "Registers: ";
             for (size_t i = 0; i < MalachiteCore::REGISTER_COUNT; i++) {
@@ -63,36 +113,7 @@ namespace Malachite
         }
 	};
 
-    struct ValueFrame 
-    {
-        enum ValueSourceType {IMMEDIATE,VARIABLE,OPERATION_RESULT};
-        enum ValueType { UINT, INT, DOUBLE};    //FLOAT(malachite syntax) = DOUBLE(c++)
-        uint64_t used_register = InvalidRegister;
-        TokenValue immediate_value = TokenValue((uint64_t)0);
-        variableID variable_id = InvalidRegister;
-        ValueSourceType value_source_type = ValueSourceType::IMMEDIATE;
-        Type::VMAnalog value_type = Type::VMAnalog::UINT;
-        ValueFrame(variableID var, uint64_t ur, Type::VMAnalog type = Type::VMAnalog::UINT)
-        {
-            variable_id = var;
-            value_source_type = ValueSourceType::VARIABLE;
-            used_register = ur;
-            value_type = type;
-        }
-        ValueFrame(TokenValue vaL, uint64_t ur, Type::VMAnalog type = Type::VMAnalog::UINT)
-        {
-            immediate_value = vaL;
-            value_source_type = ValueSourceType::IMMEDIATE;
-            used_register = ur;
-            value_type = type;
-        }
-        ValueFrame(uint64_t ur, Type::VMAnalog type = Type::VMAnalog::UINT)
-        {
-            value_source_type = ValueSourceType::OPERATION_RESULT;
-            used_register = ur;
-            value_type = type;
-        }
-    };
+    
 
     struct VariableInfo 
     {
@@ -103,9 +124,9 @@ namespace Malachite
     struct ByteDecodingState 
     {
         uint64_t ip = 0;
-        RegistersTable regsTable{};
+        RegistersTable registers_table{};
         std::shared_ptr<CompilationState> current_state{};
-        int64_t current_depth = StartDepth; //Program starts by ScopeStart and ends by ScopeEnd, but we need start depth = 0
+        int64_t current_depth = StartDepth; //Program starts by OpenVisibleScope and ends by CloseVisibleScope, but we need start depth = 0
         std::stack<ValueFrame> value_stack{};         //Stack for operations
         std::stack<uint64_t> frame_size_stack{};    //When we create variable add it size to frame_size stack;
 
@@ -115,6 +136,7 @@ namespace Malachite
         std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, uint64_t>>> waiting_jumps{};  //Label ID, IP (Pseudo,Byte) of jmp commands
 
         std::vector<MalachiteCore::VMCommand>* current_commands = nullptr;
+
     };
 
 
@@ -131,6 +153,7 @@ namespace Malachite
 
         std::vector<MalachiteCore::VMCommand> HandleOpCodeSectionCommands(const std::vector<PseudoCommand>& cmds, size_t& ip);
 
+        std::vector<MalachiteCore::VMCommand> HandleSpecialCommands(const std::vector<PseudoCommand>& cmds, size_t& ip);
 
         std::vector<MalachiteCore::VMCommand> HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
 

@@ -141,7 +141,7 @@ namespace Malachite
 				if (skip_scopes.empty() || !(skip_scopes.top().flag && skip_scopes.top().depth == current_depth))
 				{
 					ASTNode scope_start;
-					scope_start.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::SCOPE_START, -1, current_depth));
+					scope_start.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::OPEN_VISIBLE_SCOPE, -1, current_depth));
 					cn_stack.top().children.push_back(scope_start);
 				}
 
@@ -160,7 +160,7 @@ namespace Malachite
 				if (skip_scopes.empty() || !(skip_scopes.top().flag && skip_scopes.top().depth + 1 == current_depth))
 				{
 					ASTNode scope_end;
-					scope_end.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::SCOPE_END, -1, current_depth));	//TODO инрементировать, если надо
+					scope_end.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::CLOSE_VISIBLE_SCOPE, -1, current_depth));	//TODO инрементировать, если надо
 					cn_stack.top().children.push_back(scope_end);
 				}
 				else if (skip_scopes.top().flag && skip_scopes.top().depth + 1 == current_depth)

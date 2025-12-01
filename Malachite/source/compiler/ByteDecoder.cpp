@@ -35,6 +35,7 @@ namespace Malachite
 				//	//letter. Alias its common pseudoname of some type, if parent type is primitive -> push type.size, if class -> push pointer size
 				//}
 				//We need to push stack pointer
+				std::cout << var.name << "|" << vi.stack_offset << "|" << vi.depth << "|" << type.size << "\n";
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_PUSH,type.size,0));	//Take trash from zero register for pulling variable's space 
 				break;
 			}
@@ -56,18 +57,28 @@ namespace Malachite
 		std::vector<MalachiteCore::VMCommand> result;
 		PseudoCommand pd = cmds[ip];
 		//SCOPE START/END
-		if (pd.op_code == PseudoOpCode::ScopeStart)
+		if (pd.op_code == PseudoOpCode::OpenVisibleScope)
 		{
 			result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_CREATE_FRAME));	//Creates frame in the vm data stack
 			current_BDS.frame_size_stack.push(0);
 			current_BDS.current_depth++;
 		}
-		if (pd.op_code == PseudoOpCode::ScopeEnd)
+		if (pd.op_code == PseudoOpCode::CloseVisibleScope)
 		{
+			if (current_BDS.current_depth == StartDepth)
+			{
+				Logger::Get().PrintLogicError("CloseVisibleScope close too many scopes.", ip);
+				return result;
+			}
 			result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_DESTROY_FRAME));	//Destroes frame in the vm data stack
 			current_BDS.frame_size_stack.pop();
-			current_BDS.regsTable.Clear();	//Clears register after scope's exit
+			current_BDS.registers_table.Clear();	//Clears register after scope's exit
 			current_BDS.current_depth--;
+		}
+		if (pd.op_code == PseudoOpCode::CloseVisibleScopes)
+		{
+			result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_DESTROY_FRAMES));	//Destroes frame in the vm data stack
+			result.back().destination = pd.parameters[PseudoCodeInfo::Get().valueID_name].uintVal;
 		}
 		//Loading/Storing
 
@@ -104,6 +115,12 @@ namespace Malachite
 		if (pd.op_code == PseudoOpCode::OpCodeStart)
 		{
 			auto result1 = HandleOpCodeSectionCommands(cmds, ip);
+			result.insert(result.end(), result1.begin(), result1.end());
+		}
+		//Arithmetic
+		if (pd.op_code > PseudoOpCode::START_SECTION_SPECIAL_OPS && pd.op_code < PseudoOpCode::END_SECTION_SPECIAL_OPS)
+		{
+			auto result1 = HandleSpecialCommands(cmds, ip);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
 		return result;

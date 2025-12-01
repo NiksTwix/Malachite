@@ -61,7 +61,7 @@ namespace Malachite
 				result.push_back(func_call);
 				Logger::Get().PrintInfo("ToPostfix: discovered function's call \"" + func_call.tokens[0].token.value.strVal + "\" with " + std::to_string(func_call.tokens.size() - 2) + " arguments.");
 			}
-			else if (t.type == TokenType::IDENTIFIER || t.type == TokenType::LITERAL) {
+			else if (t.type == TokenType::IDENTIFIER || t.type == TokenType::LITERAL || t.type == TokenType::KEYWORD) {
 				result.push_back(TokensGroup(t));
 			}
 			else if (t.type == TokenType::OPERATOR) {
@@ -169,7 +169,7 @@ namespace Malachite
 				if (t.type == TokenType::KEYWORD) 
 				{
 					if (t.value.strVal == SyntaxInfoKeywords::Get().keyword_continue || t.value.strVal == SyntaxInfoKeywords::Get().keyword_break) {
-						result.push_back(PseudoCommand(PseudoOpCode::ExceptHandling, {{PseudoCodeInfo::Get().valueID_name, t.value} }));
+						result.push_back(PseudoCommand(PseudoOpCode::ExceptHandling, {{PseudoCodeInfo::Get().labelMark_name, t.value} }));
 					}
 				}
 			}
@@ -391,20 +391,25 @@ namespace Malachite
 			{
 				switch ((CompilationLabel)t.value.uintVal)
 				{
-				case CompilationLabel::SCOPE_START:
+				case CompilationLabel::OPEN_VISIBLE_SCOPE:
 					state->PushSpace();
-					result.push_back(PseudoCommand(PseudoOpCode::ScopeStart));
+					result.push_back(PseudoCommand(PseudoOpCode::OpenVisibleScope));
 					break;
-				case CompilationLabel::SCOPE_END:
+				case CompilationLabel::CLOSE_VISIBLE_SCOPE:
 					if (!state->HasSpaces())
 					{
 						Logger::Get().PrintLogicError("Unexpected scope escape of variables", t.line);
 						return result;
 					}
 					state->PopSpace();
-					result.push_back(PseudoCommand(PseudoOpCode::ScopeEnd));
+					result.push_back(PseudoCommand(PseudoOpCode::CloseVisibleScope));
 					break;
-				default:
+				case CompilationLabel::OPERATION_END:
+					if (!temp_tokens.empty()) 
+					{
+						std::vector<PseudoCommand> commands = ProcessRightSide(temp_tokens, es);
+						result.insert(result.end(), commands.begin(), commands.end());
+					}
 					break;
 				}
 				return result;

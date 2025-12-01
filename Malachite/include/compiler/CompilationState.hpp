@@ -281,7 +281,27 @@ namespace Malachite
 			vf->functions_table.AddFunction(function);
 			functions_global_table.emplace(function.function_id, Function(function));	//adds to global_table
 		}
-
+		void AddTypeToCurrentSpace(Type& type)
+		{
+			VisibleFrame* vf = GetCurrentSpace();
+			if (!vf) return;
+			vf->types_table.AddType(type);
+			types_global_table.emplace(type.type_id, Type(type));	//adds to global_table
+		}
+		void AddVariableToCurrentSpace(Variable& variable)
+		{
+			VisibleFrame* vf = GetCurrentSpace();
+			if (!vf) return;
+			vf->variables_table.AddVariable(variable);
+			variables_global_table.emplace(variable.variable_id, Variable(variable));	//adds to global_table
+		}
+		void AddFunctionToCurrentSpace(Function& function)
+		{
+			VisibleFrame* vf = GetCurrentSpace();
+			if (!vf) return;
+			vf->functions_table.AddFunction(function);
+			functions_global_table.emplace(function.function_id, Function(function));	//adds to global_table
+		}
 		VisibleFrame* GetSpace(size_t depth = 1) //depth min = 1
 		{
 			return depth > 0 && depth <= spaces.size() ? spaces[depth-1].get() : nullptr;

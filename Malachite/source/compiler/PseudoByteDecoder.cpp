@@ -30,7 +30,7 @@ namespace Malachite
 			}
 			if (depth > 0)args[arg_index].push_back(t);
 		}
-		if (args.size() < 2) { Logger::Get().PrintSyntaxError("Invalid for cycle. Invalid cycle's args.", node.tokens[0].line); return; }
+		if (args.size() < 2) { Logger::Get().PrintSyntaxError("Invalid for cycle. Invalid cycle's args.", node.tokens[0].line); return commands; }
 		if (args.size() == 2) args.push_back({ Token(TokenType::LITERAL, (int64_t)1) });	//Set default step
 
 		//Labels
@@ -39,31 +39,122 @@ namespace Malachite
 		std::string label_for_end = StringOperations::GenerateLabel("#for_end");
 		std::string label_for_body = StringOperations::GenerateLabel("#for_body");
 		std::string label_for_greater = StringOperations::GenerateLabel("#for_greater");
+		//Pseudonyms of registers
+		std::string c_for_start = StringOperations::GenerateLabel("#c_for_start");
+		std::string c_for_end = StringOperations::GenerateLabel("#c_for_end");
+		std::string c_for_step = StringOperations::GenerateLabel("#c_for_step");
+
+		auto checking_label_id = PseudoCodeInfo::Get().GetNewLabelID();
+		auto add_label_id = PseudoCodeInfo::Get().GetNewLabelID();
+		auto end_label_id = PseudoCodeInfo::Get().GetNewLabelID();
+		auto body_label_id = PseudoCodeInfo::Get().GetNewLabelID();
+		auto greater_label_id = PseudoCodeInfo::Get().GetNewLabelID();
 
 		auto start = ex_decoder.DecodeExpression(args[0],state);
 		auto end = ex_decoder.DecodeExpression(args[1], state);
 		auto step = ex_decoder.DecodeExpression(args[2], state);
 
-		/*
-			We need to take over the registration, so we don't know the data value in advance. And then we'll retrieve it.
-			Four new pseudo commands:
-			1) ExceptHandling (for continue and break), recursion is the power!
-			2) SaveToRegisterWithPseudonym - parameters: pseudonym -> bytedecoder allocate's register (if not allocated) and create's (if not created) a writting {pseudonym, register_number} 
-			and save's value from value_stack -> value.used_register = pseudonym::register_number! <---------------------- change's used_register
-			3) ReleaseRegisterWithPseudonym - parameters: pseudonym -> bytedecoder release's and delete's the writting {pseudonym, register_number}
-			4) LoadFromRegisterWithPseudonym - parameters: pseudonym -> bytedecoder load's data from register to value_stack
-		*/
+		commands.insert(commands.end(), start.begin(), start.end());
+		commands.push_back(PseudoCommand(PseudoOpCode::SaveToRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_start} }));
+		commands.insert(commands.end(), end.begin(), end.end());
+		commands.push_back(PseudoCommand(PseudoOpCode::SaveToRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_end} }));
+		commands.insert(commands.end(), step.begin(), step.end());
+		commands.push_back(PseudoCommand(PseudoOpCode::SaveToRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_step} }));
 
-		return std::vector<PseudoCommand>();
+		//-------Declaring of cycle's variable-------
+		ASTNode scope_start;
+		scope_start.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::OPEN_VISIBLE_SCOPE, -1));
+		auto  pc_scope_start = ex_decoder.DecodeExpression(scope_start, state);
+		commands.push_back(pc_scope_start.back());		//For cycle is the exception in ASTBuilder (OpenVisibleScope/CloseVisibleScope auto inserting is disable)
+
+		Variable var(variable.value.strVal, state->FindType(SyntaxInfoKeywords::Get().typemarker_int)->type_id, false);
+		state->AddVariableToSpace(state->GetCurrentSpace()->vfid, var);
+		PseudoCommand declare_cmd(PseudoOpCode::DeclareVariable);
+		declare_cmd.parameters[PseudoCodeInfo::Get().variableID_name] = var.variable_id;
+		declare_cmd.parameters[PseudoCodeInfo::Get().typeID_name] =  state->FindType(SyntaxInfoKeywords::Get().typemarker_int)->type_id;
+		commands.push_back(declare_cmd);
+
+		
+		//------------Set start value----------------
+		commands.push_back(PseudoCommand(PseudoOpCode::LoadFromRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_start} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::Store, { {PseudoCodeInfo::Get().variableID_name,var.variable_id } }));
+		//---------------Checking--------------------
+		
+		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,checking_label_id},{PseudoCodeInfo::Get().labelMark_name,label_for_check} }));
+		// Step checking: step > 0 - direct, step < 0 - reversed
+		commands.push_back(PseudoCommand(PseudoOpCode::LoadFromRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_step} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::Immediate, { {PseudoCodeInfo::Get().valueID_name,(int64_t)0} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::Less));
+		commands.push_back(PseudoCommand(PseudoOpCode::JumpNotIf, { {PseudoCodeInfo::Get().labelID_name, greater_label_id} }));
+		//Less-----(Reversed cycle)---[...)
+		commands.push_back(PseudoCommand(PseudoOpCode::Load, { {PseudoCodeInfo::Get().variableID_name,var.variable_id } }));	
+		commands.push_back(PseudoCommand(PseudoOpCode::LoadFromRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_end} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::LessEqual));
+		commands.push_back(PseudoCommand(PseudoOpCode::JumpNotIf, { {PseudoCodeInfo::Get().labelID_name, body_label_id} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::Jump, { {PseudoCodeInfo::Get().labelID_name, end_label_id} }));
+		//Greater---(Direct cycle)----[...)
+		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,greater_label_id},{PseudoCodeInfo::Get().labelMark_name,label_for_greater} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::Load, { {PseudoCodeInfo::Get().variableID_name,var.variable_id } }));	
+		commands.push_back(PseudoCommand(PseudoOpCode::LoadFromRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_end} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::GreaterEqual));
+		commands.push_back(PseudoCommand(PseudoOpCode::JumpNotIf, { {PseudoCodeInfo::Get().labelID_name, body_label_id} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::Jump, { {PseudoCodeInfo::Get().labelID_name, end_label_id} }));
+		//-----------------Body----------------------
+		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,body_label_id},{PseudoCodeInfo::Get().labelMark_name,label_for_body} }));
+
+		std::vector<PseudoCommand> body_commands;
+		for (ASTNode child : node.children) {
+			auto childChain = RecursiveHandle(child, state);
+			body_commands.insert(body_commands.end(), childChain.begin(), childChain.end());
+		}
+
+		int depth_in_body = 0;
+
+		for (int i = 0; i < body_commands.size(); i++)
+		{
+			//Search unhandled break and continue
+			PseudoCommand& c = body_commands[i]; 
+			if (c.op_code == PseudoOpCode::OpenVisibleScope) depth_in_body++;
+			else if (c.op_code == PseudoOpCode::CloseVisibleScope) depth_in_body--;
+			if (c.op_code == PseudoOpCode::ExceptHandling)
+			{	//Work's soo awful
+				if (depth_in_body > 0)
+				{
+					commands.push_back(PseudoCommand(PseudoOpCode::CloseVisibleScopes, { {PseudoCodeInfo::Get().valueID_name,(uint64_t)depth_in_body} })); //
+				}
+				if (c.parameters[PseudoCodeInfo::Get().labelMark_name].strVal == SyntaxInfoKeywords::Get().keyword_break)
+				{
+					c.op_code = PseudoOpCode::Jump;
+					c.parameters[PseudoCodeInfo::Get().labelID_name] = end_label_id;
+				}
+				if (c.parameters[PseudoCodeInfo::Get().labelMark_name].strVal == SyntaxInfoKeywords::Get().keyword_continue)
+				{
+					c.op_code = PseudoOpCode::Jump;
+					c.parameters[PseudoCodeInfo::Get().labelID_name] = add_label_id;
+				}
+			}
+			commands.push_back(c);
+		}
+
+		//-----------------Add-----------------------
+		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,add_label_id},{PseudoCodeInfo::Get().labelMark_name,label_for_add } }));
+		commands.push_back(PseudoCommand(PseudoOpCode::Load, { {PseudoCodeInfo::Get().variableID_name,var.variable_id } }));
+		commands.push_back(PseudoCommand(PseudoOpCode::LoadFromRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_step} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::Add));
+		commands.push_back(PseudoCommand(PseudoOpCode::Store, { {PseudoCodeInfo::Get().variableID_name,var.variable_id } }));	//Save new value to variable
+		commands.push_back(PseudoCommand(PseudoOpCode::Jump, { {PseudoCodeInfo::Get().labelID_name, checking_label_id} }));			//Jump back to checking section
+		//-----------------End-----------------------
+		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,end_label_id},{PseudoCodeInfo::Get().labelMark_name,label_for_end } }));
+		commands.push_back(PseudoCommand(PseudoOpCode::ReleaseRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_start} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::ReleaseRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_end} }));
+		commands.push_back(PseudoCommand(PseudoOpCode::ReleaseRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_step} }));
+
+		ASTNode scope_end;
+		scope_end.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::CLOSE_VISIBLE_SCOPE));
+		auto pc_scope_end = ex_decoder.DecodeExpression(scope_end, state);
+		commands.push_back(pc_scope_end.back());
+		return commands;
 	}
-
-
-
-
-
-
-
-
 
 
 	std::vector<PseudoCommand> PseudoByteDecoder::ParseCycles(const ASTNode& node, std::shared_ptr<CompilationState> state)
@@ -92,13 +183,13 @@ namespace Malachite
 	{
 		auto compilation_state = std::make_shared<CompilationState>();
 		std::vector<PseudoCommand> result;
-		result.push_back(PseudoCommand(PseudoOpCode::ScopeStart));
+		result.push_back(PseudoCommand(PseudoOpCode::OpenVisibleScope));
 		for (auto& n : node) 
 		{
 			auto result1 = RecursiveHandle(n, compilation_state);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
-		result.push_back(PseudoCommand(PseudoOpCode::ScopeEnd));
+		result.push_back(PseudoCommand(PseudoOpCode::CloseVisibleScope));
 		return std::pair<std::shared_ptr<CompilationState>, std::vector<PseudoCommand>>(compilation_state, result);
 	}
 	std::vector<PseudoCommand> PseudoByteDecoder::RecursiveHandle(const ASTNode& node, std::shared_ptr<CompilationState> state)
@@ -255,7 +346,7 @@ namespace Malachite
 			}
 			else	// if/elif (true): operation
 			{
-				auto operation_tokens = StringOperations::TrimVector<Token>(child_node.tokens, condition_end_index+1, child_node.tokens.size()-1);	
+				auto operation_tokens = StringOperations::TrimVector<Token>(child_node.tokens, condition_end_index+2, child_node.tokens.size()-1);		// +2 - skip :
 				auto operation_commands = ex_decoder.DecodeExpression(operation_tokens, state);
 				block_commands.insert(block_commands.end(), operation_commands.begin(), operation_commands.end());
 			}
