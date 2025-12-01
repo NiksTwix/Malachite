@@ -68,7 +68,7 @@ namespace Malachite
 		commands.push_back(pc_scope_start.back());		//For cycle is the exception in ASTBuilder (OpenVisibleScope/CloseVisibleScope auto inserting is disable)
 
 		Variable var(variable.value.strVal, state->FindType(SyntaxInfoKeywords::Get().typemarker_int)->type_id, false);
-		state->AddVariableToSpace(state->GetCurrentSpace()->vfid, var);
+		state->AddVariableToCurrentSpace(var);
 		PseudoCommand declare_cmd(PseudoOpCode::DeclareVariable);
 		declare_cmd.parameters[PseudoCodeInfo::Get().variableID_name] = var.variable_id;
 		declare_cmd.parameters[PseudoCodeInfo::Get().typeID_name] =  state->FindType(SyntaxInfoKeywords::Get().typemarker_int)->type_id;
@@ -102,13 +102,17 @@ namespace Malachite
 		//-----------------Body----------------------
 		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,body_label_id},{PseudoCodeInfo::Get().labelMark_name,label_for_body} }));
 
+		scope_start.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::OPEN_VISIBLE_SCOPE, -1));
+		pc_scope_start = ex_decoder.DecodeExpression(scope_start, state);
+		commands.push_back(pc_scope_start.back());
+
 		std::vector<PseudoCommand> body_commands;
 		for (ASTNode child : node.children) {
 			auto childChain = RecursiveHandle(child, state);
 			body_commands.insert(body_commands.end(), childChain.begin(), childChain.end());
 		}
 
-		int depth_in_body = 0;
+		int depth_in_body = 1;	//Corrected by 1 because we insert OPEN_VISIBLE_SCOPE in start of body 
 
 		for (int i = 0; i < body_commands.size(); i++)
 		{
@@ -137,6 +141,11 @@ namespace Malachite
 		}
 
 		//-----------------Add-----------------------
+		ASTNode scope_end;
+		scope_end.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::CLOSE_VISIBLE_SCOPE));	//delete all from cycle's body
+		auto pc_scope_end = ex_decoder.DecodeExpression(scope_end, state);
+		commands.push_back(pc_scope_end.back());
+		//Before label because continue has already deleted scopes | break delete's all body's visible scope's and it jumps to end_label
 		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,add_label_id},{PseudoCodeInfo::Get().labelMark_name,label_for_add } }));
 		commands.push_back(PseudoCommand(PseudoOpCode::Load, { {PseudoCodeInfo::Get().variableID_name,var.variable_id } }));
 		commands.push_back(PseudoCommand(PseudoOpCode::LoadFromRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_step} }));
@@ -148,10 +157,8 @@ namespace Malachite
 		commands.push_back(PseudoCommand(PseudoOpCode::ReleaseRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_start} }));
 		commands.push_back(PseudoCommand(PseudoOpCode::ReleaseRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_end} }));
 		commands.push_back(PseudoCommand(PseudoOpCode::ReleaseRegisterWithPseudonym, { {PseudoCodeInfo::Get().pseudonym_name,c_for_step} }));
-
-		ASTNode scope_end;
-		scope_end.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::CLOSE_VISIBLE_SCOPE));
-		auto pc_scope_end = ex_decoder.DecodeExpression(scope_end, state);
+		scope_end.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::CLOSE_VISIBLE_SCOPE));	//with cycle's variable
+		pc_scope_end = ex_decoder.DecodeExpression(scope_end, state);
 		commands.push_back(pc_scope_end.back());
 		return commands;
 	}

@@ -11,22 +11,42 @@ using namespace MalachiteCore;
 int main()
 {
 	std::string code = R"CODE(
-// 3. БЫСТРАЯ ПРОВЕРКА АРИФМЕТИКИ
-int a = 7
-int b = 3
-int c = 0
-
-c = a * b - (a + b) / 2  // 7*3 - (7+3)/2 = 21 - 5 = 16
-
-op_code {
+int c1 = 0;
+int a1 = 0;
+int b1 = 0;
+for a (0, 5) {
+    for b (0, 5) {
+        for c (0, 5) {
+            if (c == 2) {continue}
+            if (a == 3 && b == 3) {break}  // должен выйти из цикла по b
+            if (a == 4) {break}            // должен выйти из цикла по a
+			c1 += c;
+			a1 += a;
+			b1 += b;
+        }
+    }
+}
+op_code
+{
+    OP_MOV_RI_INT RA, 'a'
+    OP_SYSTEM_CALL PRINT_CHAR, RA
+    LOAD_RV RA, a1
+    OP_SYSTEM_CALL PRINT_INT, RA
+    OP_MOV_RI_INT RA, ' '
+    OP_SYSTEM_CALL PRINT_CHAR, RA
+    OP_MOV_RI_INT RA, 'b'
+    OP_SYSTEM_CALL PRINT_CHAR, RA
+    LOAD_RV RA, b1
+    OP_SYSTEM_CALL PRINT_INT, RA
     OP_MOV_RI_INT RA, '\n'
     OP_SYSTEM_CALL PRINT_CHAR, RA
-    OP_MOV_RI_INT RA, 'C'
-    OP_SYSTEM_CALL PRINT_CHAR, RA  
-    OP_MOV_RI_INT RA, '='
+	OP_MOV_RI_INT RA, 'c'
     OP_SYSTEM_CALL PRINT_CHAR, RA
-    LOAD_RV RA, c
-    OP_SYSTEM_CALL PRINT_INT, RA  // 16?
+    LOAD_RV RA, c1
+    OP_SYSTEM_CALL PRINT_INT, RA
+    OP_MOV_RI_INT RA, '\n'
+    OP_SYSTEM_CALL PRINT_CHAR, RA
+
 }
 )CODE";
 
