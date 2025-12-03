@@ -2,17 +2,11 @@
 #include <stack>
 namespace Malachite 
 {
-	void Malachite::ByteDecoder::ClearState()
-	{
-		current_BDS = ByteDecodingState();
-	}
 
-	
-
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
-		PseudoCommand cmd = cmds[ip];
+		PseudoCommand cmd = cmds[current_BDS.ip];
 		switch (cmd.op_code)
 		{
 			case PseudoOpCode::DeclareVariable:
@@ -21,7 +15,7 @@ namespace Malachite
 				Type& type = current_BDS.current_state->types_global_table.at(var.type_id);
 				if (type.size == 0)
 				{
-					Logger::Get().PrintLogicError("Invalid type size == 0. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
+					Logger::Get().PrintLogicError("Invalid type size == 0. Instruction pointer of pseudo code: " + std::to_string(current_BDS.ip), current_BDS.ip);
 					break;
 				}
 				VariableInfo vi;
@@ -52,10 +46,10 @@ namespace Malachite
 		return result;
 	}
 	
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
-		PseudoCommand pd = cmds[ip];
+		PseudoCommand pd = cmds[current_BDS.ip];
 		//SCOPE START/END
 		if (pd.op_code == PseudoOpCode::OpenVisibleScope)
 		{
@@ -67,7 +61,7 @@ namespace Malachite
 		{
 			if (current_BDS.current_depth == StartDepth)
 			{
-				Logger::Get().PrintLogicError("CloseVisibleScope close too many scopes.", ip);
+				Logger::Get().PrintLogicError("CloseVisibleScope close too many scopes.", current_BDS.ip);
 				return result;
 			}
 			result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_DESTROY_FRAME));	//Destroes frame in the vm data stack
@@ -84,43 +78,43 @@ namespace Malachite
 
 		if (pd.op_code > PseudoOpCode::START_SECTION_MEMORY_OPS && pd.op_code < PseudoOpCode::END_SECTION_MEMORY_OPS)
 		{
-			auto result1 = HandleMemoryCommand(cmds, ip);
+			auto result1 = HandleMemoryCommand(cmds, current_BDS);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
 		//Declaring
 		if (pd.op_code > PseudoOpCode::START_SECTION_DECLARING_OPS && pd.op_code < PseudoOpCode::END_SECTION_DECLARING_OPS)
 		{
-			auto result1 = HandleDeclaringCommand(cmds, ip);
+			auto result1 = HandleDeclaringCommand(cmds, current_BDS);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
 		//Arithmetic
 		if (pd.op_code > PseudoOpCode::START_SECTION_ARITHMETIC_OPS && pd.op_code < PseudoOpCode::END_SECTION_ARITHMETIC_OPS)
 		{
-			auto result1 = HandleArithmeticCommand(cmds, ip);
+			auto result1 = HandleArithmeticCommand(cmds, current_BDS);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
 		//Logic
 		if (pd.op_code > PseudoOpCode::START_SECTION_LOGIC_OPS && pd.op_code < PseudoOpCode::END_SECTION_LOGIC_OPS)
 		{
-			auto result1 = HandleLogicCommand(cmds, ip);
+			auto result1 = HandleLogicCommand(cmds, current_BDS);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
 		//Arithmetic
 		if (pd.op_code > PseudoOpCode::START_SECTION_CONTROL_FLOW_OPS && pd.op_code < PseudoOpCode::END_SECTION_CONTROL_FLOW_OPS)
 		{
-			auto result1 = HandleControlFlowCommand(cmds, ip);
+			auto result1 = HandleControlFlowCommand(cmds, current_BDS);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
 		//OpCode
 		if (pd.op_code == PseudoOpCode::OpCodeStart)
 		{
-			auto result1 = HandleOpCodeSectionCommands(cmds, ip);
+			auto result1 = HandleOpCodeSectionCommands(cmds, current_BDS);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
 		//Arithmetic
 		if (pd.op_code > PseudoOpCode::START_SECTION_SPECIAL_OPS && pd.op_code < PseudoOpCode::END_SECTION_SPECIAL_OPS)
 		{
-			auto result1 = HandleSpecialCommands(cmds, ip);
+			auto result1 = HandleSpecialCommands(cmds, current_BDS);
 			result.insert(result.end(), result1.begin(), result1.end());
 		}
 		return result;
@@ -263,7 +257,7 @@ namespace Malachite
 
 	std::vector<MalachiteCore::VMCommand> Malachite::ByteDecoder::PseudoToByte(std::pair<std::shared_ptr<CompilationState>, std::vector<PseudoCommand>> state)
 	{
-		ClearState();
+		ByteDecodingState current_BDS;
 		current_BDS.current_state = state.first;
 		std::vector<PseudoCommand>& code = state.second;
 
@@ -273,7 +267,7 @@ namespace Malachite
 		{
 			for (; current_BDS.ip < code.size(); current_BDS.ip++)
 			{
-				auto commands = HandleCommand(code, current_BDS.ip);
+				auto commands = HandleCommand(code, current_BDS);
 				result.insert(result.end(), commands.begin(), commands.end());
 			}
 		}

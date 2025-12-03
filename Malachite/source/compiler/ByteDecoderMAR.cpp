@@ -5,18 +5,18 @@
 //Memory and arithmetic code generation
 namespace Malachite 
 {
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS)
 	{
 		//e convert the type of the right value to the left one
 		std::vector<MalachiteCore::VMCommand> result;
-		PseudoCommand cmd = cmds[ip];
+		PseudoCommand cmd = cmds[current_BDS.ip];
 
 		auto main_ari_handler = [&]() -> void
 			{
 				//Use secondly register of the one operand
 				if (current_BDS.value_stack.size() < 2)
 				{
-					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", current_BDS.ip);
 					return;
 				}
 				ValueFrame right = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
@@ -71,7 +71,7 @@ namespace Malachite
 		{
 			if (current_BDS.value_stack.size() < 2)
 			{
-				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
+				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", current_BDS.ip);
 				break;
 			}
 			ValueFrame right = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
@@ -79,7 +79,7 @@ namespace Malachite
 
 			// Mod только для целых типов
 			if ((left.value_type != Type::VMAnalog::INT && left.value_type != Type::VMAnalog::UINT) || (right.value_type != Type::VMAnalog::INT && right.value_type != Type::VMAnalog::UINT)) {
-				Logger::Get().PrintTypeError("Mod operation requires integer types.", ip);
+				Logger::Get().PrintTypeError("Mod operation requires integer types.", current_BDS.ip);
 				break;
 			}
 			uint64_t converted_reg;
@@ -109,14 +109,14 @@ namespace Malachite
 		{
 			if (current_BDS.value_stack.size() < 1)
 			{
-				Logger::Get().PrintTypeError("Negative is unary operation, but gets only zero.", ip);
+				Logger::Get().PrintTypeError("Negative is unary operation, but gets only zero.", current_BDS.ip);
 				break;
 			}
 			ValueFrame vf_left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
 
 			// Negative только для знаковых типов (INT, DOUBLE)
 			if (vf_left.value_type != Type::VMAnalog::INT && vf_left.value_type != Type::VMAnalog::DOUBLE) {
-				Logger::Get().PrintTypeError("Negative operation requires signed types (int, double).", ip);
+				Logger::Get().PrintTypeError("Negative operation requires signed types (int, double).", current_BDS.ip);
 				break;
 			}
 
@@ -128,15 +128,15 @@ namespace Malachite
 		}
 		return result;
 	}
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleLogicCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleLogicCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
-		PseudoCommand cmd = cmds[ip];
+		PseudoCommand cmd = cmds[current_BDS.ip];
 		auto main_logic_handler = [&]() -> void
 			{
 				if (current_BDS.value_stack.size() < 2)
 				{
-					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", current_BDS.ip);
 					return;
 				}
 				ValueFrame right = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
@@ -156,7 +156,7 @@ namespace Malachite
 			{
 				if (current_BDS.value_stack.size() < 2)
 				{
-					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", ip);
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is binary operation, but gets only one.", current_BDS.ip);
 					return;
 				}
 				ValueFrame right = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
@@ -199,7 +199,7 @@ namespace Malachite
 		{
 			if (current_BDS.value_stack.size() < 1)
 			{
-				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is unary operation, but gets only zero.", ip);
+				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is unary operation, but gets only zero.", current_BDS.ip);
 				break;
 			}
 			ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
@@ -220,7 +220,7 @@ namespace Malachite
 		{
 			if (current_BDS.value_stack.size() < 1)
 			{
-				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is unary operation, but gets only zero.", ip);
+				Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " is unary operation, but gets only zero.", current_BDS.ip);
 				break;
 			}
 			ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
@@ -269,16 +269,16 @@ namespace Malachite
 		}
 		return result;
 	}
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleOpCodeSectionCommands(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleOpCodeSectionCommands(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS)
 	{
 		std::unordered_map<std::string, uint64_t> registers;
 		std::vector<MalachiteCore::VMCommand> result;
 
 		bool ended = false;
 
-		for (; ip < cmds.size(); ip++) 
+		for (; current_BDS.ip < cmds.size(); current_BDS.ip++) 
 		{
-			const PseudoCommand& command = cmds[ip];
+			const PseudoCommand& command = cmds[current_BDS.ip];
 
 			if (command.op_code == PseudoOpCode::OpCodeStart) continue;
 			else if (command.op_code == PseudoOpCode::OpCodeEnd) {
@@ -298,7 +298,7 @@ namespace Malachite
 					uint64_t reg_number = current_BDS.registers_table.Allocate();
 					if (reg_number == InvalidRegister) 
 					{
-						Logger::Get().PrintTypeError("Basic registers hasnt allocated. Register's table hasn't free registers.", ip);
+						Logger::Get().PrintTypeError("Basic registers hasnt allocated. Register's table hasn't free registers.", current_BDS.ip);
 						break;
 					}
 					registers.insert({ reg,reg_number });
@@ -356,7 +356,7 @@ namespace Malachite
 					}
 					if (type.vm_analog == Type::VMAnalog::NONE)
 					{
-						Logger::Get().PrintLogicError("Primitive type \"" + type.name + "\" hasnt analog in the Malachite Virtual Machine.Instruction pointer of pseudo code : " + std::to_string(ip), ip);
+						Logger::Get().PrintLogicError("Primitive type \"" + type.name + "\" hasnt analog in the Malachite Virtual Machine.Instruction pointer of pseudo code : " + std::to_string(current_BDS.ip), current_BDS.ip);
 						break;
 					}
 				}
@@ -407,27 +407,27 @@ namespace Malachite
 		}
 		if (!ended) 
 		{
-			Logger::Get().PrintSyntaxError("Opcode section hasnt end label.", ip);
+			Logger::Get().PrintSyntaxError("Opcode section hasnt end label.", current_BDS.ip);
 		}
 
 		return result;
 	}
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleSpecialCommands(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleSpecialCommands(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
-		PseudoCommand cmd = cmds[ip];
+		PseudoCommand cmd = cmds[current_BDS.ip];
 		switch (cmd.op_code)
 		{
 			case PseudoOpCode::SaveToRegisterWithPseudonym:
 			{
 				if (!cmd.parameters.count(PseudoCodeInfo::Get().pseudonym_name))
 				{
-					Logger::Get().PrintLogicError("SaveToRegisterWithPseudonym doesnt have a parameter \"" + PseudoCodeInfo::Get().pseudonym_name + "\".", ip);
+					Logger::Get().PrintLogicError("SaveToRegisterWithPseudonym doesnt have a parameter \"" + PseudoCodeInfo::Get().pseudonym_name + "\".", current_BDS.ip);
 					return result;
 				}
 				if (current_BDS.value_stack.empty())
 				{
-					Logger::Get().PrintLogicError("SaveToRegisterWithPseudonym cant get value from value stack(empty).", ip);
+					Logger::Get().PrintLogicError("SaveToRegisterWithPseudonym cant get value from value stack(empty).", current_BDS.ip);
 					return result;
 				}
 				auto& pseudonym = cmd.parameters[PseudoCodeInfo::Get().pseudonym_name].strVal;
@@ -436,7 +436,7 @@ namespace Malachite
 					auto allocated_register = current_BDS.registers_table.Allocate();
 					if (allocated_register == InvalidRegister) {
 						// Обработка: нет свободных регистров
-						Logger::Get().PrintLogicError("No free registers for pseudonym.", ip);
+						Logger::Get().PrintLogicError("No free registers for pseudonym.", current_BDS.ip);
 						return result;
 					}
 					current_BDS.registers_table.pseudonymized_registers.emplace(pseudonym,std::make_pair(allocated_register, ValueFrame()));//Create clear pair with pseudonym
@@ -456,20 +456,20 @@ namespace Malachite
 			{
 				if (!cmd.parameters.count(PseudoCodeInfo::Get().pseudonym_name))
 				{
-					Logger::Get().PrintLogicError("LoadFromRegisterWithPseudonym doesnt have a parameter \"" + PseudoCodeInfo::Get().pseudonym_name + "\".", ip);
+					Logger::Get().PrintLogicError("LoadFromRegisterWithPseudonym doesnt have a parameter \"" + PseudoCodeInfo::Get().pseudonym_name + "\".", current_BDS.ip);
 					return result;
 				}
 				auto& pseudonym = cmd.parameters[PseudoCodeInfo::Get().pseudonym_name].strVal;
 				if (!current_BDS.registers_table.pseudonymized_registers.count(pseudonym))
 				{
-					Logger::Get().PrintLogicError("LoadFromRegisterWithPseudonym cant load value from pseudonymized register.", ip);
+					Logger::Get().PrintLogicError("LoadFromRegisterWithPseudonym cant load value from pseudonymized register.", current_BDS.ip);
 					return result;
 				}
 				ValueFrame value_frame = current_BDS.registers_table.pseudonymized_registers[pseudonym].second;	//Copy
 				auto allocated_register_for_copy = current_BDS.registers_table.Allocate();
 				if (allocated_register_for_copy == InvalidRegister) {
 					// Обработка: нет свободных регистров
-					Logger::Get().PrintLogicError("No free registers for copy from pseudonymized register.", ip);
+					Logger::Get().PrintLogicError("No free registers for copy from pseudonymized register.", current_BDS.ip);
 					return result;
 				}
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RR, allocated_register_for_copy, value_frame.used_register));
@@ -481,13 +481,13 @@ namespace Malachite
 			{
 				if (!cmd.parameters.count(PseudoCodeInfo::Get().pseudonym_name))
 				{
-					Logger::Get().PrintLogicError("ReleaseRegisterWithPseudonym doesnt have a parameter \"" + PseudoCodeInfo::Get().pseudonym_name + "\".", ip);
+					Logger::Get().PrintLogicError("ReleaseRegisterWithPseudonym doesnt have a parameter \"" + PseudoCodeInfo::Get().pseudonym_name + "\".", current_BDS.ip);
 					return result;
 				}
 				auto& pseudonym = cmd.parameters[PseudoCodeInfo::Get().pseudonym_name].strVal;
 				if (!current_BDS.registers_table.pseudonymized_registers.count(pseudonym))
 				{
-					Logger::Get().PrintLogicError("ReleaseRegisterWithPseudonym cant release pseudonymized.", ip);
+					Logger::Get().PrintLogicError("ReleaseRegisterWithPseudonym cant release pseudonymized.", current_BDS.ip);
 					return result;
 				}
 
@@ -501,10 +501,10 @@ namespace Malachite
 		}
 		return result;
 	}
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds,ByteDecodingState& current_BDS)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
-		PseudoCommand cmd = cmds[ip];
+		PseudoCommand cmd = cmds[current_BDS.ip];
 		switch (cmd.op_code)
 		{
 			case PseudoOpCode::Jump:
@@ -513,7 +513,7 @@ namespace Malachite
 
 				if (!current_BDS.labels.count(l_id))
 				{
-					current_BDS.waiting_jumps[l_id].push_back({ ip,current_BDS.current_commands->size() });
+					current_BDS.waiting_jumps[l_id].push_back({ current_BDS.ip,current_BDS.current_commands->size() });
 					result.push_back(MalachiteCore::VMCommand(
 						MalachiteCore::OpCode::OP_JMP,
 						l_id
@@ -533,7 +533,7 @@ namespace Malachite
 			{
 				if (current_BDS.value_stack.size() < 1)
 				{
-					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a boolean value.", ip);
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a boolean value.", current_BDS.ip);
 					break;
 				}
 				ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
@@ -541,7 +541,7 @@ namespace Malachite
 
 				if (!current_BDS.labels.count(l_id))
 				{
-					current_BDS.waiting_jumps[l_id].push_back({ ip,current_BDS.current_commands->size() });
+					current_BDS.waiting_jumps[l_id].push_back({ current_BDS.ip,current_BDS.current_commands->size() });
 					result.push_back(MalachiteCore::VMCommand(
 						MalachiteCore::OpCode::OP_JMP_CV,
 						l_id,
@@ -563,7 +563,7 @@ namespace Malachite
 			{
 				if (current_BDS.value_stack.size() < 1)
 				{
-					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a boolean value.", ip);
+					Logger::Get().PrintTypeError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a boolean value.", current_BDS.ip);
 					break;
 				}
 				ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
@@ -571,7 +571,7 @@ namespace Malachite
 
 				if (!current_BDS.labels.count(l_id))
 				{
-					current_BDS.waiting_jumps[l_id].push_back({ ip,current_BDS.current_commands->size() });
+					current_BDS.waiting_jumps[l_id].push_back({ current_BDS.ip,current_BDS.current_commands->size() });
 					result.push_back(MalachiteCore::VMCommand(
 						MalachiteCore::OpCode::OP_JMP_CNV,
 						l_id,
@@ -595,7 +595,7 @@ namespace Malachite
 
 				if (current_BDS.labels.count(l_id))
 				{
-					Logger::Get().PrintTypeError("Label with id = " + std::to_string(l_id) + " already exists.",ip);
+					Logger::Get().PrintTypeError("Label with id = " + std::to_string(l_id) + " already exists.",current_BDS.ip);
 					break;
 				}
 
@@ -615,10 +615,10 @@ namespace Malachite
 		}
 		return result;
 	}
-	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t& ip)
+	std::vector<MalachiteCore::VMCommand> ByteDecoder::HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS)
 	{
 		std::vector<MalachiteCore::VMCommand> result;
-		PseudoCommand cmd = cmds[ip];
+		PseudoCommand cmd = cmds[current_BDS.ip];
 		switch (cmd.op_code)
 		{
 		case PseudoOpCode::Immediate:
@@ -627,12 +627,12 @@ namespace Malachite
 			auto free_register = current_BDS.registers_table.Allocate();
 			if (free_register == InvalidRegister)
 			{
-				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
+				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(current_BDS.ip), current_BDS.ip);
 			}
 			switch (val.type)
 			{
 			case Malachite::TokenValueType::VOID:
-				Logger::Get().PrintTypeError("Attemp of immediating void value. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
+				Logger::Get().PrintTypeError("Attemp of immediating void value. Instruction pointer of pseudo code: " + std::to_string(current_BDS.ip), current_BDS.ip);
 				return result;
 			case Malachite::TokenValueType::INT:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_INT, free_register, MalachiteCore::Register(val.intVal)));
@@ -648,7 +648,7 @@ namespace Malachite
 				current_BDS.value_stack.push(ValueFrame(val, free_register, Type::VMAnalog::DOUBLE));
 				return result;
 			case Malachite::TokenValueType::STRING:
-				Logger::Get().PrintTypeError("Attemp of direct immediating string value. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
+				Logger::Get().PrintTypeError("Attemp of direct immediating string value. Instruction pointer of pseudo code: " + std::to_string(current_BDS.ip), current_BDS.ip);
 				return result;
 			case Malachite::TokenValueType::CHAR:
 				result.push_back(MalachiteCore::VMCommand(MalachiteCore::OpCode::OP_MOV_RI_INT, free_register, MalachiteCore::Register((int64_t)val.charVal)));
@@ -673,7 +673,7 @@ namespace Malachite
 			auto free_register = current_BDS.registers_table.Allocate();
 			if (free_register == InvalidRegister)
 			{
-				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
+				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(current_BDS.ip), current_BDS.ip);
 				break;
 			}
 			size_t size = type.size;
@@ -693,7 +693,7 @@ namespace Malachite
 				}
 				if (type.vm_analog == Type::VMAnalog::NONE)
 				{
-					Logger::Get().PrintLogicError("Primitive type \"" + type.name + "\" hasnt analog in the Malachite Virtual Machine.Instruction pointer of pseudo code : " + std::to_string(ip), ip);
+					Logger::Get().PrintLogicError("Primitive type \"" + type.name + "\" hasnt analog in the Malachite Virtual Machine.Instruction pointer of pseudo code : " + std::to_string(current_BDS.ip), current_BDS.ip);
 					break;
 				}
 				current_BDS.value_stack.push(ValueFrame(var.variable_id, free_register, type.vm_analog));
@@ -724,7 +724,7 @@ namespace Malachite
 			current_BDS.value_stack.pop();
 			if (vf.used_register == InvalidRegister)
 			{
-				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(ip), ip);
+				Logger::Get().PrintLogicError("All registers are in using. Instruction pointer of pseudo code: " + std::to_string(current_BDS.ip), current_BDS.ip);
 			}
 			size_t size = type.size;
 			if (type.category == Type::Category::PRIMITIVE)

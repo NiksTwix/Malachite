@@ -133,7 +133,7 @@ namespace Malachite
         std::unordered_map<variableID, VariableInfo> variable_depth{}; //variableID and info about variable. If we meet DECLARE_VARIABLE -> add writting <ID, Info>
 
         std::unordered_map<uint64_t, uint64_t>  labels{}; //ID, IP
-        std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, uint64_t>>> waiting_jumps{};  //Label ID, IP (Pseudo,Byte) of jmp commands
+        std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, uint64_t>>> waiting_jumps{};  //Label ID, IP (Pseudo,Byte/Native) of jmp commands,
 
         std::vector<MalachiteCore::VMCommand>* current_commands = nullptr;
 
@@ -143,21 +143,19 @@ namespace Malachite
 	class ByteDecoder		//Pseudo->Byte code
 	{
     private:
-
-        ByteDecodingState current_BDS;
         //Methods---------------------
-        std::vector<MalachiteCore::VMCommand> HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
-        std::vector<MalachiteCore::VMCommand> HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
-        std::vector<MalachiteCore::VMCommand> HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
-        std::vector<MalachiteCore::VMCommand> HandleLogicCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
+        std::vector<MalachiteCore::VMCommand> HandleMemoryCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS);
+        std::vector<MalachiteCore::VMCommand> HandleDeclaringCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS);
+        std::vector<MalachiteCore::VMCommand> HandleArithmeticCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS);
+        std::vector<MalachiteCore::VMCommand> HandleLogicCommand(const std::vector<PseudoCommand>& cmds,ByteDecodingState& current_BDS);
 
-        std::vector<MalachiteCore::VMCommand> HandleOpCodeSectionCommands(const std::vector<PseudoCommand>& cmds, size_t& ip);
+        std::vector<MalachiteCore::VMCommand> HandleOpCodeSectionCommands(const std::vector<PseudoCommand>& cmds,ByteDecodingState& current_BDS);
 
-        std::vector<MalachiteCore::VMCommand> HandleSpecialCommands(const std::vector<PseudoCommand>& cmds, size_t& ip);
+        std::vector<MalachiteCore::VMCommand> HandleSpecialCommands(const std::vector<PseudoCommand>& cmds,  ByteDecodingState& current_BDS);
 
-        std::vector<MalachiteCore::VMCommand> HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
+        std::vector<MalachiteCore::VMCommand> HandleControlFlowCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS);
 
-        std::vector<MalachiteCore::VMCommand> HandleCommand(const std::vector<PseudoCommand>& cmds, size_t& ip);
+        std::vector<MalachiteCore::VMCommand> HandleCommand(const std::vector<PseudoCommand>& cmds, ByteDecodingState& current_BDS);
 
 
 
@@ -169,9 +167,6 @@ namespace Malachite
         MalachiteCore::OpCode GetVMTypedArithmeticCommand(PseudoOpCode code, Type::VMAnalog type); 
 
         MalachiteCore::OpCode GetVMLogicCommand(PseudoOpCode code, Type::VMAnalog type);
-
-        void ClearState();
-
     public:
         std::vector<MalachiteCore::VMCommand> PseudoToByte(std::pair<std::shared_ptr<CompilationState>, std::vector<PseudoCommand>> state);
 	};

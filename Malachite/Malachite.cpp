@@ -6,48 +6,46 @@
 #include "include/compiler/PseudoByteDecoder.hpp"
 #include "include/compiler/ByteDecoder.hpp"
 #include <vector>
+#include <chrono>
 using namespace MalachiteCore;
 
 int main()
 {
 	std::string code = R"CODE(
-int c1 = 0;
-int a1 = 0;
-int b1 = 0;
-for a (0, 5) {
-    for b (0, 5) {
-        for c (0, 5) {
-            if (c == 2) {continue}
-            if (a == 3 && b == 3) {break}  // должен выйти из цикла по b
-            if (a == 4) {break}            // должен выйти из цикла по a
-			c1 += c;
-			a1 += a;
-			b1 += b;
-        }
-    }
-}
-op_code
+for x (10,0,-1)
 {
-    OP_MOV_RI_INT RA, 'a'
-    OP_SYSTEM_CALL PRINT_CHAR, RA
-    LOAD_RV RA, a1
-    OP_SYSTEM_CALL PRINT_INT, RA
-    OP_MOV_RI_INT RA, ' '
-    OP_SYSTEM_CALL PRINT_CHAR, RA
-    OP_MOV_RI_INT RA, 'b'
-    OP_SYSTEM_CALL PRINT_CHAR, RA
-    LOAD_RV RA, b1
-    OP_SYSTEM_CALL PRINT_INT, RA
-    OP_MOV_RI_INT RA, '\n'
-    OP_SYSTEM_CALL PRINT_CHAR, RA
-	OP_MOV_RI_INT RA, 'c'
-    OP_SYSTEM_CALL PRINT_CHAR, RA
-    LOAD_RV RA, c1
-    OP_SYSTEM_CALL PRINT_INT, RA
-    OP_MOV_RI_INT RA, '\n'
-    OP_SYSTEM_CALL PRINT_CHAR, RA
-
+	int b = x
+	int x = -10
+	loop {
+		x += -1
+		
+		if (x == -20): break
+		if (x >= -15)
+		{
+			continue
+		}
+		op_code
+		{
+			LOAD_RV RA, x
+			OP_SYSTEM_CALL PRINT_INT, RA
+			OP_MOV_RI_INT RA, ' '
+			OP_SYSTEM_CALL PRINT_CHAR, RA
+		}
+	
+	}
+	op_code{
+	OP_MOV_RI_INT RA, '='
+	OP_SYSTEM_CALL PRINT_CHAR, RA
+	OP_MOV_RI_INT RA, '>'
+	OP_SYSTEM_CALL PRINT_CHAR, RA
+	LOAD_RV RA, b
+	OP_SYSTEM_CALL PRINT_INT, RA
+	OP_MOV_RI_INT RA, '\n'
+	OP_SYSTEM_CALL PRINT_CHAR, RA
+	}
+	
 }
+
 )CODE";
 
 	Malachite::Lexer lexer;
@@ -109,15 +107,16 @@ op_code
 		index++;
 	}
 	
+	std::chrono::steady_clock::time_point t = std::chrono::steady_clock::now();
 	VMState state;
 	MalachiteCore::VMError err = execute(&state, r1.data(), r1.size());
-	
+	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 	if (err)
 	{
 		auto r = state.error_stack.top();
 		std::cout << "Error:" << (uint16_t)err << " " << "IP:" << r.ip << "\n";
 	}
-	
+	std::cout << "Duration : " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t) << "\n";
 	//std::cout << "Registers dump-------------------------------------\n";
 	//std::cout << "integer\t\t\tunsigned integer\t\t\tdouble\n";
 	//for (int i = 0; i < 10; i++) 
