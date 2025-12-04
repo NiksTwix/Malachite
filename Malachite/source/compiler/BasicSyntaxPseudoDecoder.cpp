@@ -5,7 +5,80 @@ namespace Malachite
 {
 	std::vector<PseudoCommand> BasicSyntaxPseudoDecoder::ParseWhileBlock(const ASTNode& node, std::shared_ptr<CompilationState> state, recursive_handler rh)
 	{
-		return std::vector<PseudoCommand>();
+		std::vector<PseudoCommand> commands;
+		if (node.tokens.size() < 4) { Logger::Get().PrintSyntaxError("Invalid while cycle. Invalid cycle header's structure.", node.tokens[0].line); return commands; }
+		std::vector<Token> condition;
+		int depth = 0;
+
+	
+		for (size_t i = 0; i < node.tokens.size(); i++)
+		{
+			Token t = node.tokens[i];
+			if (t.type == TokenType::DELIMITER)
+			{
+				if (t.value.strVal == "(") { 
+					depth++;
+					if (depth == 1) continue; 
+				}
+				else if (t.value.strVal == ")") { depth--; if (depth == 0) break; }
+			}
+			if (depth > 0) condition.push_back(t);
+		}
+		if (condition.size() < 1) { Logger::Get().PrintSyntaxError("Invalid while cycle. Invalid cycle's condition.", node.tokens[0].line); return commands; }
+
+		//Labels
+		std::string label_while_check = StringOperations::GenerateLabel("#while_check");
+		std::string label_while_end = StringOperations::GenerateLabel("#while_end");
+		auto checking_label_id = PseudoCodeInfo::Get().GetNewLabelID();
+		auto end_label_id = PseudoCodeInfo::Get().GetNewLabelID();
+
+		auto condition_commands = ex_decoder.DecodeExpression(condition, state);
+		//-------Checking-------
+		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,checking_label_id},{PseudoCodeInfo::Get().labelMark_name,label_while_check} }));
+		commands.insert(commands.end(), condition_commands.begin(), condition_commands.end());
+		commands.push_back(PseudoCommand(PseudoOpCode::JumpNotIf, { {PseudoCodeInfo::Get().labelID_name, end_label_id} }));
+
+		//Auto inserting OVS and CVS in ASTBuilder <----
+
+		//-------Body-------
+
+		std::vector<PseudoCommand> body_commands;
+		for (ASTNode child : node.children) {
+			auto childChain = rh(child, state);
+			body_commands.insert(body_commands.end(), childChain.begin(), childChain.end());
+		}
+
+		int depth_in_body = 0;	//Is 0 because ASTBuilder inserted OPEN_VISIBLE_SCOPE in body (child nodes)  
+
+		for (int i = 0; i < body_commands.size(); i++)
+		{
+			//Search unhandled break and continue
+			PseudoCommand& c = body_commands[i];
+			if (c.op_code == PseudoOpCode::OpenVisibleScope) depth_in_body++;
+			else if (c.op_code == PseudoOpCode::CloseVisibleScope) depth_in_body--;
+			if (c.op_code == PseudoOpCode::ExceptHandling)
+			{	//Work's soo awful
+				if (depth_in_body > 0)
+				{
+					commands.push_back(PseudoCommand(PseudoOpCode::CloseVisibleScopes, { {PseudoCodeInfo::Get().valueID_name,(uint64_t)depth_in_body} })); //
+				}
+				if (c.parameters[PseudoCodeInfo::Get().labelMark_name].strVal == SyntaxInfoKeywords::Get().keyword_break)
+				{
+					c.op_code = PseudoOpCode::Jump;
+					c.parameters[PseudoCodeInfo::Get().labelID_name] = end_label_id;
+				}
+				if (c.parameters[PseudoCodeInfo::Get().labelMark_name].strVal == SyntaxInfoKeywords::Get().keyword_continue)
+				{
+					c.op_code = PseudoOpCode::Jump;
+					c.parameters[PseudoCodeInfo::Get().labelID_name] = checking_label_id;
+				}
+			}
+			commands.push_back(c);
+		}
+		commands.push_back(PseudoCommand(PseudoOpCode::Jump, { {PseudoCodeInfo::Get().labelID_name, checking_label_id} }));			//Jump back to start
+		//-----------------End-----------------------
+		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,end_label_id},{PseudoCodeInfo::Get().labelMark_name,label_while_end } }));
+		return commands;
 	}
 	std::vector<PseudoCommand> BasicSyntaxPseudoDecoder::ParseForBlock(const ASTNode& node, std::shared_ptr<CompilationState> state, recursive_handler rh)	//foreach and forint will be in individual handlers
 	{
@@ -23,7 +96,11 @@ namespace Malachite
 			Token t = node.tokens[i];
 			if (t.type == TokenType::DELIMITER)
 			{
-				if (t.value.strVal == "(") { depth++; continue; }
+				if (t.value.strVal == "(") 
+				{ 
+					depth++; 
+					if (depth == 1)	continue;
+				}
 				else if (t.value.strVal == ")") { depth--; if (depth == 0) break; }
 				if (t.value.strVal == ",")
 				{
@@ -115,7 +192,7 @@ namespace Malachite
 			body_commands.insert(body_commands.end(), childChain.begin(), childChain.end());
 		}
 
-		int depth_in_body = 1;	//Corrected by 1 because we insert OPEN_VISIBLE_SCOPE in start of body 
+		int depth_in_body = 1;	//Corrected by 1 because we insert OPEN_VISIBLE_SCOPE in start of body ( they are not in the children )
 
 		for (int i = 0; i < body_commands.size(); i++)
 		{
@@ -176,18 +253,14 @@ namespace Malachite
 		//--------------------Header--------------------
 		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,loop_start_label_id},{PseudoCodeInfo::Get().labelMark_name,label_loop_start} }));
 		//---------------------Body---------------------
-		ASTNode scope_start;
-		scope_start.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::OPEN_VISIBLE_SCOPE, -1));
-		auto pc_scope_start = ex_decoder.DecodeExpression(scope_start, state);
-		commands.push_back(pc_scope_start.back());
-
+		//Auto inserting OVS and CVS in ASTBuilder <----
 		std::vector<PseudoCommand> body_commands;
 		for (ASTNode child : node.children) {
 			auto childChain = rh(child, state);
 			body_commands.insert(body_commands.end(), childChain.begin(), childChain.end());
 		}
 
-		int depth_in_body = 1;	//Corrected by 1 because we insert OPEN_VISIBLE_SCOPE in start of body 
+		int depth_in_body = 0;	//Is 0 because ASTBuilder inserted OPEN_VISIBLE_SCOPE in body (child nodes)  
 
 		for (int i = 0; i < body_commands.size(); i++)
 		{
@@ -214,11 +287,6 @@ namespace Malachite
 			}
 			commands.push_back(c);
 		}
-		ASTNode scope_end;
-		scope_end.tokens.push_back(Token(TokenType::COMPILATION_LABEL, (uint64_t)CompilationLabel::CLOSE_VISIBLE_SCOPE));	//delete all from cycle's body
-		auto pc_scope_end = ex_decoder.DecodeExpression(scope_end, state);
-		commands.push_back(pc_scope_end.back());
-
 		commands.push_back(PseudoCommand(PseudoOpCode::Jump, { {PseudoCodeInfo::Get().labelID_name, loop_start_label_id} }));			//Jump back to start
 		//---------------------Exit---------------------
 		commands.push_back(PseudoCommand(PseudoOpCode::Label, { {PseudoCodeInfo::Get().labelID_name,loop_end_label_id},{PseudoCodeInfo::Get().labelMark_name,label_loop_end} }));
@@ -236,7 +304,7 @@ namespace Malachite
 		}
 		else if (node.tokens[0].value.strVal == SyntaxInfoKeywords::Get().keyword_while)
 		{
-			//while handling
+			result = ParseWhileBlock(node, state, rh);
 		}
 		else if (node.tokens[0].value.strVal == SyntaxInfoKeywords::Get().keyword_for)
 		{

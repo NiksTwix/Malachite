@@ -12,18 +12,24 @@ using namespace MalachiteCore;
 int main()
 {
 	std::string code = R"CODE(
-for x (10,0,-1)
+int x = 100
+int y = 100;
+while (x < 300 && (y*y) >= 10000)
 {
-	int b = x
-	int x = -10
-	loop {
-		x += -1
-		
-		if (x == -20): break
-		if (x >= -15)
+	x += 1
+	if (x > 150 && x < 180): continue
+	elif (x > 210 && x < 220) { continue }
+	elif (x == 250)
+	{
+		op_code
 		{
-			continue
+			OP_MOV_RI_INT RA, '|'
+			OP_SYSTEM_CALL PRINT_CHAR, RA
 		}
+		break;
+	}
+	else
+	{
 		op_code
 		{
 			LOAD_RV RA, x
@@ -31,21 +37,16 @@ for x (10,0,-1)
 			OP_MOV_RI_INT RA, ' '
 			OP_SYSTEM_CALL PRINT_CHAR, RA
 		}
-	
 	}
-	op_code{
-	OP_MOV_RI_INT RA, '='
-	OP_SYSTEM_CALL PRINT_CHAR, RA
-	OP_MOV_RI_INT RA, '>'
-	OP_SYSTEM_CALL PRINT_CHAR, RA
-	LOAD_RV RA, b
-	OP_SYSTEM_CALL PRINT_INT, RA
-	OP_MOV_RI_INT RA, '\n'
-	OP_SYSTEM_CALL PRINT_CHAR, RA
-	}
-	
 }
-
+x = 5000
+op_code
+{
+		LOAD_RV RA, x
+		OP_SYSTEM_CALL PRINT_INT, RA
+		OP_MOV_RI_INT RA, ' '
+		OP_SYSTEM_CALL PRINT_CHAR, RA
+}
 )CODE";
 
 	Malachite::Lexer lexer;

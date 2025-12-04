@@ -509,6 +509,10 @@ namespace Malachite
 		{
 			case PseudoOpCode::Jump:
 			{
+				if (cmd.parameters[PseudoCodeInfo::Get().labelID_name].type != TokenValueType::UINT) 
+				{
+					Logger::Get().PrintLogicError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a uint label jmp id.", current_BDS.ip);
+				}
 				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
 
 				if (!current_BDS.labels.count(l_id))
@@ -537,6 +541,10 @@ namespace Malachite
 					break;
 				}
 				ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
+				if (cmd.parameters[PseudoCodeInfo::Get().labelID_name].type != TokenValueType::UINT)
+				{
+					Logger::Get().PrintLogicError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a uint label jmp id.", current_BDS.ip);
+				}
 				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
 
 				if (!current_BDS.labels.count(l_id))
@@ -567,6 +575,10 @@ namespace Malachite
 					break;
 				}
 				ValueFrame left = current_BDS.value_stack.top(); current_BDS.value_stack.pop();
+				if (cmd.parameters[PseudoCodeInfo::Get().labelID_name].type != TokenValueType::UINT)
+				{
+					Logger::Get().PrintLogicError(SyntaxInfo::GetPseudoString(cmd.op_code) + " needs a uint label jmp id.", current_BDS.ip);
+				}
 				uint64_t l_id = cmd.parameters[PseudoCodeInfo::Get().labelID_name].uintVal;
 
 				if (!current_BDS.labels.count(l_id))
